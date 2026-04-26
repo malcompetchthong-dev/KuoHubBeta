@@ -195,7 +195,7 @@ elseif MM2 then
 loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/MM2.lua", true))()  
 
 elseif DEADRAILS then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/DeadRails.lua", true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/DeadRails.lua", true))()
             
 elseif (MAPBLADEB or MAPAFS or MAPRGH or MAPHAZEP or MAPALS or DRIVEEMPIRE or SOLRNG or TITAN or MS or AV or PG or Fish or Jujutsu or AA or BL or AD or AC or HT or ARX or BS or GAG or ASTDX or days99 or ZOmBie or game.GameId == 6701277882 or BAZ or game.GameId == 7671049560 or game.GameId == 7394964165 or game.GameId == 8144728961 or game.GameId == 5130394318) then  
 loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/99Nights.lua", true))()  
