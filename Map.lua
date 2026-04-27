@@ -181,8 +181,8 @@ local ZOmBie = game.GameId == 7750955984
 local FishIt = game.GameId == 121864768012064      
 local BAZ = game.GameId == 8066283370      
 local MM2 = game.GameId == 66654135 or game.PlaceId == 142823291      
-local DEADRAILS = game.PlaceId == 116495829188952 or game.GameId == 7018190066    
-                          
+local TSB = game.GameId == 3808081382 or game.PlaceId == 10449761463
+            
 repeat task.wait() until game:IsLoaded()      
       
 if MAPBF then      
@@ -194,9 +194,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/xshiba/CreamSoScute/m
 elseif MM2 then      
 loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/MM2.lua", true))()      
     
-elseif DEADRAILS then    
-loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/DeadRails.lua", true))()    
-                
+elseif TSB then
+loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/TSB.lua", true))()
+            
 elseif (MAPBLADEB or MAPAFS or MAPRGH or MAPHAZEP or MAPALS or DRIVEEMPIRE or SOLRNG or TITAN or AV or Fish or AA or BL or AD or AC or BS or GAG or ASTDX or days99 or ZOmBie or BAZ or game.GameId == 6701277882 or game.GameId == 7671049560 or game.GameId == 7394964165 or game.GameId == 8144728961 or game.GameId == 5130394318) then    
     
 loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/99Nights.lua", true))()      
