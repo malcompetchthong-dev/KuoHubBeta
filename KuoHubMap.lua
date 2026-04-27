@@ -195,7 +195,7 @@ elseif MM2 then
 loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/MM2.lua", true))()      
     
 elseif TSB then
-    loadstring(game:HttpGet("URL_สคริปต์_TSB"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/KuoHubBeta/refs/heads/main/TSB.lua", true))()
       
 elseif (MAPBLADEB or MAPAFS or MAPRGH or MAPHAZEP or MAPALS or DRIVEEMPIRE or SOLRNG or TITAN or AV or Fish or AA or BL or AD or AC or BS or GAG or ASTDX or days99 or ZOmBie or BAZ or game.GameId == 6701277882 or game.GameId == 7671049560 or game.GameId == 7394964165 or game.GameId == 8144728961 or game.GameId == 5130394318) then    
     
