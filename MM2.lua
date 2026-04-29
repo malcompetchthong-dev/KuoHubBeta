@@ -1,7 +1,7 @@
 local Window = loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/ITKuo/refs/heads/main/KUOHUBUI.lua"))()
 
 Window:MakeWindow({
-Title = "Kuo Hub [Beta-MM2]",
+Title = "Kuo Hub[Beta-MM2]",
 })
 
 Window:AddMinimizeButton({
@@ -50,6 +50,9 @@ local AUTO_PUSH = false
 local AUTO_LEECH_MURDER = false
 local LOOP_DELAY = 0.1
 local lastEquip = 0
+local gotGunThisRound = false
+local wasInvisibleBeforeWarp = false
+local SAFE_DISTANCE = 35
 
 -- =========================
 -- FLY
@@ -229,42 +232,102 @@ Players.PlayerAdded:Connect(setupPlayer)
 -- 🚀 AUTO WARP GUN
 -- =========================
 
+-- 🔍 หา Murderer
+local function getMurderer()
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr ~= game.Players.LocalPlayer and plr.Character then
+            if getRole(plr) == "Murderer" then
+                return plr
+            end
+        end
+    end
+end
+
+-- 🔍 เช็คปืนร่วงจริง
+local function isDroppedGun(gun)
+    if not gun then return false end
+
+    local parent = gun.Parent
+    if not parent then return false end
+
+    if parent:FindFirstChild("Humanoid") then return false end
+    if parent:IsA("Backpack") then return false end
+
+    return gun:IsDescendantOf(workspace)
+end
+
+-- 🧠 เช็คว่าปลอดภัยไหม
+local function isSafeToWarp(gunPart)
+    local murderer = getMurderer()
+    if not murderer or not murderer.Character then return true end
+
+    local mRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
+    if not mRoot then return true end
+
+    local dist = (mRoot.Position - gunPart.Position).Magnitude
+
+    -- ❌ ใกล้เกิน = อันตราย
+    if dist < SAFE_DISTANCE then
+        return false
+    end
+
+    return true
+end
+
+-- 🔁 LOOP
 task.spawn(function()
-while task.wait(0.3) do
-if AUTO_WARP_GUN then
-local player = game.Players.LocalPlayer
-local char = player.Character
-local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    while task.wait(0.2) do
+        if not AUTO_WARP_GUN then continue end
 
-local gun = workspace:FindFirstChild("GunDrop", true)
-or workspace:FindFirstChild("Gun", true)
+        local player = game.Players.LocalPlayer
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
 
-if hrp and gun then
+        local gun = workspace:FindFirstChild("GunDrop", true)
+            or workspace:FindFirstChild("Gun", true)
 
--- 📌 เก็บตำแหน่งเดิม            
-    local oldPos = hrp.CFrame            
-  
-    -- 🚀 วาร์ปไปปืน (แบบ BasePart หรือ Model ก็ได้)            
-    local targetPart = gun:IsA("BasePart") and gun             
-                    or gun:FindFirstChildWhichIsA("BasePart", true)            
-  
-    if targetPart then            
-        hrp.CFrame = targetPart.CFrame            
-  
-        task.wait(0.2) -- ให้เกมจับปืนทัน            
-  
-        -- 🔙 วาร์ปกลับ            
-        hrp.CFrame = oldPos            
-    end            
-  
-    -- ปิดหลังใช้ (ตามแบบของคุณ)            
-    AUTO_WARP_GUN = false            
-end
+        if not isDroppedGun(gun) then
+            gotGunThisRound = false
+            continue
+        end
 
-end
+        if gotGunThisRound then continue end
 
-end
+        local targetPart = gun:IsA("BasePart") and gun
+            or gun:FindFirstChildWhichIsA("BasePart", true)
 
+        if not targetPart then continue end
+
+        -- 🧠 เช็คความปลอดภัย
+        if not isSafeToWarp(targetPart) then
+            continue -- ❌ ไม่วาร์ป
+        end
+
+        gotGunThisRound = true
+
+        local oldPos = hrp.CFrame
+
+        -- 👻 ปิด Invisible
+        wasInvisibleBeforeWarp = invisible
+        if wasInvisibleBeforeWarp then
+            applyInvisible(false)
+            task.wait(0.05)
+        end
+
+        -- 🚀 วาร์ป
+        hrp.CFrame = targetPart.CFrame
+        task.wait(0.15)
+
+        -- 🔙 กลับ
+        hrp.CFrame = oldPos
+
+        -- 👻 เปิดกลับ
+        if wasInvisibleBeforeWarp then
+            task.wait(0.05)
+            applyInvisible(true)
+        end
+    end
 end)
 
 -- =========================
@@ -944,6 +1007,7 @@ player.CharacterAdded:Connect(function()
 invisible = false
 setupCharacter()
 end)
+
 -- =========================
 -- UI
 -- =========================
@@ -1024,6 +1088,7 @@ if hum then
 hum.WalkSpeed = v
 end
 end
+
 --========================
 -- SLIDER
 --========================
