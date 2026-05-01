@@ -1,7 +1,7 @@
 local Window = loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/ITKuo/refs/heads/main/KUOHUBUI.lua"))()
 
 Window:MakeWindow({
-Title = "Kuo Hub[Beta-MM2]",
+Title = "Kuo Hub [Beta-MM2]",
 })
 
 Window:AddMinimizeButton({
@@ -52,7 +52,7 @@ local LOOP_DELAY = 0.1
 local lastEquip = 0
 local gotGunThisRound = false
 local wasInvisibleBeforeWarp = false
-local SAFE_DISTANCE = 35
+local SAFE_DISTANCE_GUN = 30
 
 -- =========================
 -- FLY
@@ -86,20 +86,20 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
-
 -- =========================
 -- ROLE SYSTEM
 -- =========================
 local function getRole(plr)
-    local bp = plr:FindFirstChild("Backpack")
-    local char = plr.Character
+local bp = plr:FindFirstChild("Backpack")
+local char = plr.Character
 
-    if bp and bp:FindFirstChild("Knife") then return "Murderer" end
-    if bp and bp:FindFirstChild("Gun") then return "Sheriff" end
-    if char and char:FindFirstChild("Knife") then return "Murderer" end
-    if char and char:FindFirstChild("Gun") then return "Sheriff" end
+if bp and bp:FindFirstChild("Knife") then return "Murderer" end
+if bp and bp:FindFirstChild("Gun") then return "Sheriff" end
+if char and char:FindFirstChild("Knife") then return "Murderer" end
+if char and char:FindFirstChild("Gun") then return "Sheriff" end
 
-    return "Innocent"
+return "Innocent"
+
 end
 
 -- =========================
@@ -111,120 +111,127 @@ local lastRoles = {}
 -- CREATE ESP (สีล้วน)
 -- =========================
 local function createESP(char)
-    local hl = char:FindFirstChild("KuoHL")
-    if not hl then
-        hl = Instance.new("Highlight")
-        hl.Name = "KuoHL"
-        hl.FillTransparency = 0.5
-        hl.OutlineTransparency = 0
-        hl.Parent = char
-    end
+local hl = char:FindFirstChild("KuoHL")
+if not hl then
+hl = Instance.new("Highlight")
+hl.Name = "KuoHL"
+hl.FillTransparency = 0.5
+hl.OutlineTransparency = 0
+hl.Parent = char
+end
 end
 
 -- =========================
 -- UPDATE ESP (แค่สี)
 -- =========================
 local function updateESP(char, role)
-    local hl = char:FindFirstChild("KuoHL")
-    if not hl then return end
+local hl = char:FindFirstChild("KuoHL")
+if not hl then return end
 
-    if role == "Murderer" then
-        hl.FillColor = Color3.fromRGB(255,0,0)
-        hl.OutlineColor = Color3.fromRGB(255,0,0)
+if role == "Murderer" then
+-- 🔪 แดง
+hl.FillColor = Color3.fromRGB(255,0,0)
+hl.OutlineColor = Color3.fromRGB(255,0,0)
 
-    elseif role == "Sheriff" then
-        hl.FillColor = Color3.fromRGB(170,0,255)
-        hl.OutlineColor = Color3.fromRGB(170,0,255)
+elseif role == "Sheriff" then
+-- 🔫 ม่วง Kuo Hub
+hl.FillColor = Color3.fromRGB(170,0,255)
+hl.OutlineColor = Color3.fromRGB(170,0,255)
 
-    else
-        hl.FillColor = Color3.fromRGB(0,255,0)
-        hl.OutlineColor = Color3.fromRGB(0,255,0)
-    end
+else
+-- 🟢 Innocent
+hl.FillColor = Color3.fromRGB(0,255,0)
+hl.OutlineColor = Color3.fromRGB(0,255,0)
 end
 
+end
 -- =========================
 -- CLEAR ESP
 -- =========================
 local function clearESP(char)
-    if not char then return end
-    local hl = char:FindFirstChild("KuoHL")
-    if hl then hl:Destroy() end
+if not char then return end
+local hl = char:FindFirstChild("KuoHL")
+if hl then hl:Destroy() end
 end
 
 -- =========================
 -- MAIN LOOP
 -- =========================
 RunService.Heartbeat:Connect(function()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= player then
-            local char = plr.Character
+for _, plr in ipairs(Players:GetPlayers()) do
+if plr ~= player then
+local char = plr.Character
 
-            if char then
-                if ESP_ENABLED then
-                    local role = getRole(plr)
+if char then
+if ESP_ENABLED then
+local role = getRole(plr)
 
-                    -- 🔥 กันโดนลบ ESP
-                    if not char:FindFirstChild("KuoHL") then
-                        createESP(char)
-                        lastRoles[plr] = nil
-                    end
+-- 🔥 กันโดนลบ ESP        
+            if not char:FindFirstChild("KuoHL") then        
+                createESP(char)        
+                lastRoles[plr] = nil        
+            end        
 
-                    -- 🔄 อัปเดตเฉพาะตอน role เปลี่ยน
-                    if lastRoles[plr] ~= role then
-                        lastRoles[plr] = role
-                        updateESP(char, role)
-                    end
-                else
-                    clearESP(char)
-                end
-            end
-        end
-    end
+            -- 🔄 อัปเดตเฉพาะตอน role เปลี่ยน        
+            if lastRoles[plr] ~= role then        
+                lastRoles[plr] = role        
+                updateESP(char, role)        
+            end        
+        else        
+            clearESP(char)        
+        end        
+    end        
+end
+
+end
+
 end)
 
 -- =========================
 -- INIT + CHARACTER SUPPORT
 -- =========================
 local function setupPlayer(plr)
-    if plr == player then return end
+if plr == player then return end
 
-    -- ตอนมีตัวละครอยู่แล้ว
-    if plr.Character then
-        createESP(plr.Character)
-        local role = getRole(plr)
-        lastRoles[plr] = role
-        updateESP(plr.Character, role)
-    end
+-- ตอนมีตัวละครอยู่แล้ว
+if plr.Character then
+createESP(plr.Character)
+local role = getRole(plr)
+lastRoles[plr] = role
+updateESP(plr.Character, role)
+end
 
-    -- ตอนเกิดใหม่
-    plr.CharacterAdded:Connect(function(char)
-        char:WaitForChild("Head")
+-- ตอนเกิดใหม่
+plr.CharacterAdded:Connect(function(char)
+char:WaitForChild("Head")
 
-        if ESP_ENABLED then
-            createESP(char)
-            local role = getRole(plr)
-            lastRoles[plr] = role
-            updateESP(char, role)
-        end
-    end)
+if ESP_ENABLED then        
+    createESP(char)        
+    local role = getRole(plr)        
+    lastRoles[plr] = role        
+    updateESP(char, role)        
+end
 
-    -- 🔥 role มาใหม่ (เช่น ได้มีด/ปืน)
-    plr.ChildAdded:Connect(function()
-        lastRoles[plr] = nil
-    end)
+end)
 
-    if plr:FindFirstChild("Backpack") then
-        plr.Backpack.ChildAdded:Connect(function()
-            lastRoles[plr] = nil
-        end)
-    end
+-- 🔥 role มาใหม่ (เช่น ได้มีด/ปืน)
+plr.ChildAdded:Connect(function()
+lastRoles[plr] = nil
+end)
+
+if plr:FindFirstChild("Backpack") then
+plr.Backpack.ChildAdded:Connect(function()
+lastRoles[plr] = nil
+end)
+end
+
 end
 
 -- =========================
 -- START
 -- =========================
 for _, plr in ipairs(Players:GetPlayers()) do
-    setupPlayer(plr)
+setupPlayer(plr)
 end
 
 Players.PlayerAdded:Connect(setupPlayer)
@@ -234,100 +241,104 @@ Players.PlayerAdded:Connect(setupPlayer)
 
 -- 🔍 หา Murderer
 local function getMurderer()
-    for _, plr in ipairs(game.Players:GetPlayers()) do
-        if plr ~= game.Players.LocalPlayer and plr.Character then
-            if getRole(plr) == "Murderer" then
-                return plr
-            end
-        end
-    end
+for _, plr in ipairs(game.Players:GetPlayers()) do
+if plr ~= game.Players.LocalPlayer and plr.Character then
+if getRole(plr) == "Murderer" then
+return plr
+end
+end
+end
 end
 
 -- 🔍 เช็คปืนร่วงจริง
 local function isDroppedGun(gun)
-    if not gun then return false end
+if not gun then return false end
 
-    local parent = gun.Parent
-    if not parent then return false end
+local parent = gun.Parent
+if not parent then return false end
 
-    if parent:FindFirstChild("Humanoid") then return false end
-    if parent:IsA("Backpack") then return false end
+if parent:FindFirstChild("Humanoid") then return false end
+if parent:IsA("Backpack") then return false end
 
-    return gun:IsDescendantOf(workspace)
+return gun:IsDescendantOf(workspace)
+
 end
 
 -- 🧠 เช็คว่าปลอดภัยไหม
 local function isSafeToWarp(gunPart)
-    local murderer = getMurderer()
-    if not murderer or not murderer.Character then return true end
+local murderer = getMurderer()
+if not murderer or not murderer.Character then return true end
 
-    local mRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
-    if not mRoot then return true end
+local mRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
+if not mRoot then return true end
 
-    local dist = (mRoot.Position - gunPart.Position).Magnitude
+local dist = (mRoot.Position - gunPart.Position).Magnitude
 
-    -- ❌ ใกล้เกิน = อันตราย
-    if dist < SAFE_DISTANCE then
-        return false
-    end
+-- ❌ ใกล้เกิน = อันตราย
+if dist < SAFE_DISTANCE_GUN then
+return false
+end
 
-    return true
+return true
+
 end
 
 -- 🔁 LOOP
 task.spawn(function()
-    while task.wait(0.2) do
-        if not AUTO_WARP_GUN then continue end
+while task.wait(0.2) do
+if not AUTO_WARP_GUN then continue end
 
-        local player = game.Players.LocalPlayer
-        local char = player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then continue end
+local player = game.Players.LocalPlayer
+local char = player.Character
+local hrp = char and char:FindFirstChild("HumanoidRootPart")
+if not hrp then continue end
 
-        local gun = workspace:FindFirstChild("GunDrop", true)
-            or workspace:FindFirstChild("Gun", true)
+local gun = workspace:FindFirstChild("GunDrop", true)        
+    or workspace:FindFirstChild("Gun", true)        
 
-        if not isDroppedGun(gun) then
-            gotGunThisRound = false
-            continue
-        end
+if not isDroppedGun(gun) then        
+    gotGunThisRound = false        
+    continue        
+end        
 
-        if gotGunThisRound then continue end
+if gotGunThisRound then continue end        
 
-        local targetPart = gun:IsA("BasePart") and gun
-            or gun:FindFirstChildWhichIsA("BasePart", true)
+local targetPart = gun:IsA("BasePart") and gun        
+    or gun:FindFirstChildWhichIsA("BasePart", true)        
 
-        if not targetPart then continue end
+if not targetPart then continue end        
 
-        -- 🧠 เช็คความปลอดภัย
-        if not isSafeToWarp(targetPart) then
-            continue -- ❌ ไม่วาร์ป
-        end
+-- 🧠 เช็คความปลอดภัย        
+if not isSafeToWarp(targetPart) then        
+    continue -- ❌ ไม่วาร์ป        
+end        
 
-        gotGunThisRound = true
+gotGunThisRound = true        
 
-        local oldPos = hrp.CFrame
+local oldPos = hrp.CFrame        
 
-        -- 👻 ปิด Invisible
-        wasInvisibleBeforeWarp = invisible
-        if wasInvisibleBeforeWarp then
-            applyInvisible(false)
-            task.wait(0.05)
-        end
+-- 👻 ปิด Invisible        
+wasInvisibleBeforeWarp = invisible        
+if wasInvisibleBeforeWarp then        
+    applyInvisible(false)        
+    task.wait(0.05)        
+end        
 
-        -- 🚀 วาร์ป
-        hrp.CFrame = targetPart.CFrame
-        task.wait(0.15)
+-- 🚀 วาร์ป        
+hrp.CFrame = targetPart.CFrame        
+task.wait(0.15)        
 
-        -- 🔙 กลับ
-        hrp.CFrame = oldPos
+-- 🔙 กลับ        
+hrp.CFrame = oldPos        
 
-        -- 👻 เปิดกลับ
-        if wasInvisibleBeforeWarp then
-            task.wait(0.05)
-            applyInvisible(true)
-        end
-    end
+-- 👻 เปิดกลับ        
+if wasInvisibleBeforeWarp then        
+    task.wait(0.05)        
+    applyInvisible(true)        
+end
+
+end
+
 end)
 
 -- =========================
@@ -336,58 +347,60 @@ end)
 
 -- 🔍 หา Murderer
 local function findMurderer()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= player and plr.Character and getRole(plr) == "Murderer" then
-            return plr
-        end
-    end
+for _, plr in ipairs(Players:GetPlayers()) do
+if plr ~= player and plr.Character and getRole(plr) == "Murderer" then
+return plr
+end
+end
 end
 
 -- =========================
 -- 🎲 RANDOM PART (50% HEAD / 50% BODY)
 -- =========================
 local function getRandomPart50(targetChar)
-    local head = targetChar:FindFirstChild("Head")
+local head = targetChar:FindFirstChild("Head")
 
-    -- 50% ยิงหัว
-    if head and math.random() < 0.5 then
-        return head
-    end
+-- 50% ยิงหัว
+if head and math.random() < 0.5 then
+return head
+end
 
-    -- 50% ยิงส่วนอื่น
-    local parts = {}
-    for _, v in ipairs(targetChar:GetDescendants()) do
-        if v:IsA("BasePart") and v.Name ~= "Head" then
-            table.insert(parts, v)
-        end
-    end
+-- 50% ยิงส่วนอื่น
+local parts = {}
+for _, v in ipairs(targetChar:GetDescendants()) do
+if v:IsA("BasePart") and v.Name ~= "Head" then
+table.insert(parts, v)
+end
+end
 
-    if #parts > 0 then
-        return parts[math.random(1, #parts)]
-    end
+if #parts > 0 then
+return parts[math.random(1, #parts)]
+end
 
-    return head
+return head
+
 end
 
 -- =========================
 -- 🎯 PREDICT AIM (50/50)
 -- =========================
 local function getLeadCFrame(targetChar, originPos)
-    local part = getRandomPart50(targetChar)
-    local root = targetChar:FindFirstChild("HumanoidRootPart")
-    if not part or not root then return end
+local part = getRandomPart50(targetChar)
+local root = targetChar:FindFirstChild("HumanoidRootPart")
+if not part or not root then return end
 
-    local velocity = root.AssemblyLinearVelocity
+local velocity = root.AssemblyLinearVelocity
 
-    local distance = (part.Position - originPos).Magnitude
-    local predictTime = math.clamp(distance / 200, 0.15, 0.35)
+local distance = (part.Position - originPos).Magnitude
+local predictTime = math.clamp(distance / 200, 0.15, 0.35)
 
-    local predictedPos = part.Position + (velocity * predictTime)
+local predictedPos = part.Position + (velocity * predictTime)
 
-    -- ชดเชยแกน Y
-    predictedPos = predictedPos + Vector3.new(0, math.clamp(velocity.Y * 0.1, -2, 2), 0)
+-- ชดเชยแกน Y
+predictedPos = predictedPos + Vector3.new(0, math.clamp(velocity.Y * 0.1, -2, 2), 0)
 
-    return CFrame.new(predictedPos)
+return CFrame.new(predictedPos)
+
 end
 
 -- =========================
@@ -396,53 +409,56 @@ end
 local lastGunEquip = 0
 
 local function equipGun()
-    if tick() - lastGunEquip < 0.3 then return end
-    lastGunEquip = tick()
+if tick() - lastGunEquip < 0.3 then return end
+lastGunEquip = tick()
 
-    local char = player.Character
-    local backpack = player:FindFirstChild("Backpack")
+local char = player.Character
+local backpack = player:FindFirstChild("Backpack")
 
-    if not char or not backpack then return end
+if not char or not backpack then return end
 
-    local gun = backpack:FindFirstChild("Gun")
-    if gun then
-        gun.Parent = char
-    end
+local gun = backpack:FindFirstChild("Gun")
+if gun then
+gun.Parent = char
+end
+
 end
 
 -- =========================
 -- 🔫 AUTO SHOOT LOOP
 -- =========================
 task.spawn(function()
-    while task.wait(0.01) do
-        if not AUTO_SHOOT then continue end
+while task.wait(0.01) do
+if not AUTO_SHOOT then continue end
 
-        local target = findMurderer()
-        if not target or not target.Character then continue end
+local target = findMurderer()
+if not target or not target.Character then continue end
 
-        -- 🔥 ถือปืนอัตโนมัติ
-        equipGun()
+-- 🔥 ถือปืนอัตโนมัติ        
+equipGun()        
 
-        local char = player.Character
-        local gun = char and char:FindFirstChild("Gun")
+local char = player.Character        
+local gun = char and char:FindFirstChild("Gun")        
 
-        -- ❗ ยังไม่ถือ = ไม่ยิง
-        if not gun then continue end
+-- ❗ ยังไม่ถือ = ไม่ยิง        
+if not gun then continue end        
 
-        local shootEvent = gun:FindFirstChild("Shoot")
-        local originPart = gun:FindFirstChild("Handle")
+local shootEvent = gun:FindFirstChild("Shoot")        
+local originPart = gun:FindFirstChild("Handle")        
 
-        if not shootEvent or not originPart then continue end
+if not shootEvent or not originPart then continue end        
 
-        local originCF = originPart.CFrame
-        local targetCF = getLeadCFrame(target.Character, originPart.Position)
+local originCF = originPart.CFrame        
+local targetCF = getLeadCFrame(target.Character, originPart.Position)        
 
-        if targetCF then
-            pcall(function()
-                shootEvent:FireServer(originCF, targetCF)
-            end)
-        end
-    end
+if targetCF then        
+    pcall(function()        
+        shootEvent:FireServer(originCF, targetCF)        
+    end)        
+end
+
+end
+
 end)
 
 -- =========================
@@ -503,183 +519,192 @@ local player = Players.LocalPlayer -- 🔥 แก้จาก LocalPlayers
 -- 📦 GET CHARACTER
 -- =========================
 local function getChar()
-    return player.Character or player.CharacterAdded:Wait()
+return player.Character or player.CharacterAdded:Wait()
 end
 
 local function getHRP()
-    local char = getChar()
-    return char and char:FindFirstChild("HumanoidRootPart")
+local char = getChar()
+return char and char:FindFirstChild("HumanoidRootPart")
 end
 
 -- =========================
 -- 🔥 AUTO EQUIP KNIFE
 -- =========================
 local function equipKnife()
-    if tick() - lastEquip < 0.3 then return end
-    lastEquip = tick()
+if tick() - lastEquip < 0.3 then return end
+lastEquip = tick()
 
-    local char = getChar()
-    local backpack = player:FindFirstChild("Backpack")
+local char = getChar()
+local backpack = player:FindFirstChild("Backpack")
 
-    if not char or not backpack then return end
+if not char or not backpack then return end
 
-    local knife = backpack:FindFirstChild("Knife")
-    if knife then
-        knife.Parent = char
-    end
+local knife = backpack:FindFirstChild("Knife")
+if knife then
+knife.Parent = char
+end
+
 end
 
 local function getKnife()
-    local char = getChar()
-    return char and char:FindFirstChild("Knife")
+local char = getChar()
+return char and char:FindFirstChild("Knife")
 end
 
 -- =========================
 -- 🔪 THROW KNIFE
 -- =========================
 local function throwKnife(enemyRoot)
-    local knife = getKnife()
-    if not knife or not enemyRoot then return end
+local knife = getKnife()
+if not knife or not enemyRoot then return end
 
-    local events = knife:FindFirstChild("Events")
-    local throw = events and events:FindFirstChild("KnifeThrown")
-    if not throw then return end
+local events = knife:FindFirstChild("Events")
+local throw = events and events:FindFirstChild("KnifeThrown")
+if not throw then return end
 
-    local myRoot = getHRP()
-    if not myRoot then return end
+local myRoot = getHRP()
+if not myRoot then return end
 
-    local distance = (myRoot.Position - enemyRoot.Position).Magnitude
-    local prediction = math.clamp(distance / 200, 0.1, 0.3)
+local distance = (myRoot.Position - enemyRoot.Position).Magnitude
+local prediction = math.clamp(distance / 200, 0.1, 0.3)
 
-    local velocity = enemyRoot.AssemblyLinearVelocity
-    local predictedPos = enemyRoot.Position + (velocity * prediction)
+local velocity = enemyRoot.AssemblyLinearVelocity
+local predictedPos = enemyRoot.Position + (velocity * prediction)
 
-    throw:FireServer(
-        CFrame.new(myRoot.Position),
-        CFrame.new(predictedPos)
-    )
+throw:FireServer(
+CFrame.new(myRoot.Position),
+CFrame.new(predictedPos)
+)
+
 end
 
 -- =========================
 -- 🔪 STAB KNIFE
 -- =========================
 local function stabKnife(enemyRoot)
-    local knife = getKnife()
-    if not knife or not enemyRoot then return end
+local knife = getKnife()
+if not knife or not enemyRoot then return end
 
-    local events = knife:FindFirstChild("Events")
-    if not events then return end
+local events = knife:FindFirstChild("Events")
+if not events then return end
 
-    local handleTouched = events:FindFirstChild("HandleTouched")
-    local stabbed = events:FindFirstChild("KnifeStabbed")
+local handleTouched = events:FindFirstChild("HandleTouched")
+local stabbed = events:FindFirstChild("KnifeStabbed")
 
-    if handleTouched then
-        handleTouched:FireServer(enemyRoot)
-    end
+if handleTouched then
+handleTouched:FireServer(enemyRoot)
+end
 
-    if stabbed then
-        stabbed:FireServer()
-    end
+if stabbed then
+stabbed:FireServer()
+end
+
 end
 
 -- =========================
 -- 🎯 FIND TARGET
 -- =========================
 local function getNearestEnemy()
-    local hrp = getHRP()
-    if not hrp then return nil end
+local hrp = getHRP()
+if not hrp then return nil end
 
-    local closest = nil
-    local distMin = MAX_DISTANCE
+local closest = nil
+local distMin = MAX_DISTANCE
 
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= player and plr.Character then
-            local root = plr.Character:FindFirstChild("HumanoidRootPart")
-            if root then
-                local dist = (hrp.Position - root.Position).Magnitude
-                if dist < distMin then
-                    distMin = dist
-                    closest = plr
-                end
-            end
-        end
-    end
+for _, plr in pairs(Players:GetPlayers()) do
+if plr ~= player and plr.Character then
+local root = plr.Character:FindFirstChild("HumanoidRootPart")
+if root then
+local dist = (hrp.Position - root.Position).Magnitude
+if dist < distMin then
+distMin = dist
+closest = plr
+end
+end
+end
+end
 
-    return closest
+return closest
+
 end
 
 -- =========================
 -- 💀 ATTACK (KILL AURA)
 -- =========================
 local function attack(plr)
-    equipKnife()
+equipKnife()
 
-    local knife = getKnife()
-    if not knife then return end -- ✅ ต้องถือก่อน
+local knife = getKnife()
+if not knife then return end -- ✅ ต้องถือก่อน
 
-    local hrp = getHRP()
-    if not hrp or not plr.Character then return end
+local hrp = getHRP()
+if not hrp or not plr.Character then return end
 
-    local enemyRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-    if not enemyRoot then return end
+local enemyRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+if not enemyRoot then return end
 
-    local old = hrp.CFrame
+local old = hrp.CFrame
 
-    hrp.CFrame = CFrame.lookAt(hrp.Position, enemyRoot.Position)
-    hrp.CFrame = enemyRoot.CFrame * CFrame.new(0, 0, -2)
+hrp.CFrame = CFrame.lookAt(hrp.Position, enemyRoot.Position)
+hrp.CFrame = enemyRoot.CFrame * CFrame.new(0, 0, -2)
 
-    task.wait(0.05)
+task.wait(0.05)
 
-    for i = 1, 3 do
-        throwKnife(enemyRoot)
-        stabKnife(enemyRoot)
-        task.wait(0.03)
-    end
+for i = 1, 3 do
+throwKnife(enemyRoot)
+stabKnife(enemyRoot)
+task.wait(0.03)
+end
 
-    task.wait(0.05)
+task.wait(0.05)
 
-    hrp.CFrame = old
+hrp.CFrame = old
+
 end
 
 -- =========================
 -- 🔁 AUTO KNIFE LOOP (FIX)
 -- =========================
 task.spawn(function()
-    while task.wait(0.1) do
-        if not AUTO_KNIFE then continue end
+while task.wait(0.1) do
+if not AUTO_KNIFE then continue end
 
-        local target = getNearestEnemy()
-        if not target or not target.Character then continue end
+local target = getNearestEnemy()
+if not target or not target.Character then continue end
 
-        local root = target.Character:FindFirstChild("HumanoidRootPart")
-        if not root then continue end
+local root = target.Character:FindFirstChild("HumanoidRootPart")        
+if not root then continue end        
 
-        equipKnife()
+equipKnife()        
 
-        local knife = getKnife()
-        if not knife then continue end -- ✅ กันยิงตอนยังไม่ถือ
+local knife = getKnife()        
+if not knife then continue end -- ✅ กันยิงตอนยังไม่ถือ        
 
-        throwKnife(root)
-    end
+throwKnife(root)
+
+end
+
 end)
 
 -- =========================
 -- 🔁 KILL AURA LOOP (FIX)
 -- =========================
 task.spawn(function()
-    while task.wait(LOOP_DELAY) do
-        if not KILL_AURA then continue end
+while task.wait(LOOP_DELAY) do
+if not KILL_AURA then continue end
 
-        local target = getNearestEnemy()
-        if not target then continue end
+local target = getNearestEnemy()
+if not target then continue end
 
-        equipKnife()
+equipKnife()        
 
-        local knife = getKnife()
-        if not knife then continue end -- ✅ ต้องถือก่อน
+local knife = getKnife()        
+if not knife then continue end -- ✅ ต้องถือก่อน        
 
-        attack(target)
-    end
+attack(target)
+
+end
+
 end)
 
 local TweenService = game:GetService("TweenService")
