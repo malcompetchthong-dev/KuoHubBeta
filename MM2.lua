@@ -1,7 +1,7 @@
 local Window = loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/ITKuo/refs/heads/main/KUOHUBUI.lua"))()
 
 Window:MakeWindow({
-Title = "Kuo Hub [Beta-MM2]",
+Title = "Kuo Hub  [Beta-MM2]",
 })
 
 Window:AddMinimizeButton({
@@ -10,7 +10,9 @@ Corner = { CornerRadius = UDim.new(35, 1) },
 })
 
 local Home = Window:Tab("Home")
-local Combat = Window:Tab("Combat")
+
+local Combat = Window:MakeTab({"Combat","sword"})
+
 
 Home:Section("Main")
 
@@ -52,7 +54,7 @@ local LOOP_DELAY = 0.1
 local lastEquip = 0
 local gotGunThisRound = false
 local wasInvisibleBeforeWarp = false
-local SAFE_DISTANCE_GUN = 10
+local SAFE_DISTANCE_GUN = 30
 
 -- =========================
 -- FLY
@@ -79,6 +81,19 @@ end
 end)
 
 -- =========================
+-- CLEAN OLD CONNECTION
+-- =========================
+getgenv().KuoESPConnections = getgenv().KuoESPConnections or {}
+
+for _,c in pairs(getgenv().KuoESPConnections) do
+    pcall(function()
+        c:Disconnect()
+    end)
+end
+
+table.clear(getgenv().KuoESPConnections)
+
+-- =========================
 -- SERVICES
 -- =========================
 local Players = game:GetService("Players")
@@ -86,155 +101,204 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
+ESP_ENABLED = ESP_ENABLED or false
+
 -- =========================
 -- ROLE SYSTEM
 -- =========================
 local function getRole(plr)
-local bp = plr:FindFirstChild("Backpack")
-local char = plr.Character
+    local bp = plr:FindFirstChild("Backpack")
+    local char = plr.Character
 
-if bp and bp:FindFirstChild("Knife") then return "Murderer" end
-if bp and bp:FindFirstChild("Gun") then return "Sheriff" end
-if char and char:FindFirstChild("Knife") then return "Murderer" end
-if char and char:FindFirstChild("Gun") then return "Sheriff" end
+    if bp and bp:FindFirstChild("Knife") then
+        return "Murderer"
+    end
 
-return "Innocent"
+    if bp and bp:FindFirstChild("Gun") then
+        return "Sheriff"
+    end
 
+    if char and char:FindFirstChild("Knife") then
+        return "Murderer"
+    end
+
+    if char and char:FindFirstChild("Gun") then
+        return "Sheriff"
+    end
+
+    return "Innocent"
 end
 
 -- =========================
--- CACHE (กันกระพริบ)
+-- CACHE
 -- =========================
 local lastRoles = {}
 
 -- =========================
--- CREATE ESP (สีล้วน)
+-- CREATE ESP
 -- =========================
 local function createESP(char)
-local hl = char:FindFirstChild("KuoHL")
-if not hl then
-hl = Instance.new("Highlight")
-hl.Name = "KuoHL"
-hl.FillTransparency = 0.5
-hl.OutlineTransparency = 0
-hl.Parent = char
-end
+    local hl = char:FindFirstChild("KuoHL")
+
+    if not hl then
+        hl = Instance.new("Highlight")
+        hl.Name = "KuoHL"
+        hl.FillTransparency = 0.5
+        hl.OutlineTransparency = 0
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        hl.Parent = char
+    end
+
+    return hl
 end
 
 -- =========================
--- UPDATE ESP (แค่สี)
+-- UPDATE ESP
 -- =========================
 local function updateESP(char, role)
-local hl = char:FindFirstChild("KuoHL")
-if not hl then return end
+    local hl = createESP(char)
 
-if role == "Murderer" then
--- 🔪 แดง
-hl.FillColor = Color3.fromRGB(255,0,0)
-hl.OutlineColor = Color3.fromRGB(255,0,0)
+    if role == "Murderer" then
 
-elseif role == "Sheriff" then
--- 🔫 ม่วง Kuo Hub
-hl.FillColor = Color3.fromRGB(170,0,255)
-hl.OutlineColor = Color3.fromRGB(170,0,255)
+        hl.FillColor = Color3.fromRGB(255,0,0)
+        hl.OutlineColor = Color3.fromRGB(255,0,0)
 
-else
--- 🟢 Innocent
-hl.FillColor = Color3.fromRGB(0,255,0)
-hl.OutlineColor = Color3.fromRGB(0,255,0)
+    elseif role == "Sheriff" then
+
+        hl.FillColor = Color3.fromRGB(170,0,255)
+        hl.OutlineColor = Color3.fromRGB(170,0,255)
+
+    else
+
+        hl.FillColor = Color3.fromRGB(0,255,0)
+        hl.OutlineColor = Color3.fromRGB(0,255,0)
+
+    end
 end
 
-end
 -- =========================
 -- CLEAR ESP
 -- =========================
 local function clearESP(char)
-if not char then return end
-local hl = char:FindFirstChild("KuoHL")
-if hl then hl:Destroy() end
+    if not char then return end
+
+    local hl = char:FindFirstChild("KuoHL")
+
+    if hl then
+        hl:Destroy()
+    end
 end
 
 -- =========================
--- MAIN LOOP
+-- UPDATE PLAYER
 -- =========================
-RunService.Heartbeat:Connect(function()
-for _, plr in ipairs(Players:GetPlayers()) do
-if plr ~= player then
-local char = plr.Character
+local function updatePlayer(plr)
+    if plr == player then
+        return
+    end
 
-if char then
-if ESP_ENABLED then
-local role = getRole(plr)
+    local char = plr.Character
+    if not char then
+        return
+    end
 
--- 🔥 กันโดนลบ ESP        
-            if not char:FindFirstChild("KuoHL") then        
-                createESP(char)        
-                lastRoles[plr] = nil        
-            end        
+    if ESP_ENABLED then
 
-            -- 🔄 อัปเดตเฉพาะตอน role เปลี่ยน        
-            if lastRoles[plr] ~= role then        
-                lastRoles[plr] = role        
-                updateESP(char, role)        
-            end        
-        else        
-            clearESP(char)        
-        end        
-    end        
+        local role = getRole(plr)
+
+        if lastRoles[plr] ~= role
+        or not char:FindFirstChild("KuoHL") then
+
+            lastRoles[plr] = role
+            updateESP(char, role)
+
+        end
+
+    else
+
+        clearESP(char)
+
+    end
 end
 
-end
-
-end)
-
 -- =========================
--- INIT + CHARACTER SUPPORT
+-- SETUP PLAYER
 -- =========================
 local function setupPlayer(plr)
-if plr == player then return end
 
--- ตอนมีตัวละครอยู่แล้ว
-if plr.Character then
-createESP(plr.Character)
-local role = getRole(plr)
-lastRoles[plr] = role
-updateESP(plr.Character, role)
-end
+    if plr == player then
+        return
+    end
 
--- ตอนเกิดใหม่
-plr.CharacterAdded:Connect(function(char)
-char:WaitForChild("Head")
+    -- character spawn
+    table.insert(
+        getgenv().KuoESPConnections,
 
-if ESP_ENABLED then        
-    createESP(char)        
-    local role = getRole(plr)        
-    lastRoles[plr] = role        
-    updateESP(char, role)        
-end
+        plr.CharacterAdded:Connect(function(char)
 
-end)
+            char:WaitForChild("HumanoidRootPart",5)
 
--- 🔥 role มาใหม่ (เช่น ได้มีด/ปืน)
-plr.ChildAdded:Connect(function()
-lastRoles[plr] = nil
-end)
+            task.wait(1)
 
-if plr:FindFirstChild("Backpack") then
-plr.Backpack.ChildAdded:Connect(function()
-lastRoles[plr] = nil
-end)
-end
+            if ESP_ENABLED then
+                lastRoles[plr] = nil
+                updatePlayer(plr)
+            end
+        end)
+    )
 
+    -- backpack change
+    local function hookBackpack(bp)
+
+        table.insert(
+            getgenv().KuoESPConnections,
+
+            bp.ChildAdded:Connect(function()
+                lastRoles[plr] = nil
+            end)
+        )
+
+        table.insert(
+            getgenv().KuoESPConnections,
+
+            bp.ChildRemoved:Connect(function()
+                lastRoles[plr] = nil
+            end)
+        )
+    end
+
+    if plr:FindFirstChild("Backpack") then
+        hookBackpack(plr.Backpack)
+    end
 end
 
 -- =========================
--- START
+-- LOOP
 -- =========================
-for _, plr in ipairs(Players:GetPlayers()) do
-setupPlayer(plr)
+table.insert(
+    getgenv().KuoESPConnections,
+
+    RunService.Heartbeat:Connect(function()
+
+        for _,plr in ipairs(Players:GetPlayers()) do
+            updatePlayer(plr)
+        end
+
+    end)
+)
+
+-- =========================
+-- PLAYER ADDED
+-- =========================
+for _,plr in ipairs(Players:GetPlayers()) do
+    setupPlayer(plr)
 end
 
-Players.PlayerAdded:Connect(setupPlayer)
+table.insert(
+    getgenv().KuoESPConnections,
+
+    Players.PlayerAdded:Connect(setupPlayer)
+)
 -- =========================
 -- 🚀 AUTO WARP GUN
 -- =========================
