@@ -55,6 +55,7 @@ local lastEquip = 0
 local gotGunThisRound = false
 local wasInvisibleBeforeWarp = false
 local SAFE_DISTANCE_GUN = 30
+local GunESP = false
 
 -- =========================
 -- FLY
@@ -299,6 +300,70 @@ table.insert(
 
     Players.PlayerAdded:Connect(setupPlayer)
 )
+-- =========================
+-- 🔫 GUN ESP
+-- =========================
+
+
+local GunHL = nil
+
+local function removeGunESP()
+    if GunHL then
+        GunHL:Destroy()
+        GunHL = nil
+    end
+end
+
+local function createGunESP(gun)
+
+    removeGunESP()
+
+    local part =
+        gun:IsA("BasePart") and gun
+        or gun:FindFirstChildWhichIsA("BasePart", true)
+
+    if not part then
+        return
+    end
+
+    GunHL = Instance.new("Highlight")
+    GunHL.Name = "KuoGunESP"
+
+    GunHL.FillColor = Color3.fromRGB(0,170,255)
+    GunHL.OutlineColor = Color3.fromRGB(255,255,255)
+
+    GunHL.FillTransparency = 0.2
+    GunHL.OutlineTransparency = 0
+
+    GunHL.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    GunHL.Adornee = gun
+    GunHL.Parent = game.CoreGui
+end
+
+-- =========================
+-- 🔁 LOOP
+-- =========================
+task.spawn(function()
+
+    while task.wait(0.2) do
+
+        if not GunESP then
+            removeGunESP()
+            continue
+        end
+
+        local gun =
+            workspace:FindFirstChild("GunDrop", true)
+            or workspace:FindFirstChild("Gun", true)
+
+        if gun then
+            createGunESP(gun)
+        else
+            removeGunESP()
+        end
+    end
+end)
+
 -- =========================
 -- 🚀 AUTO WARP GUN
 -- =========================
@@ -1107,6 +1172,7 @@ Logo = "rbxassetid://126460540157931",
 Invite = "https://discord.gg/Apn2j9Fez",
 })
 Home:Toggle({Title="ESP",Desc="ไฮไลต์ผู้เล่น",Callback=function(v) ESP_ENABLED=v end})
+Home:Toggle({Title ="Gun ESP",Desc ="ไฮไลต์ปืนตก",Callback =function(v) GunESP =v end})                        
 Home:Toggle({Title="Fly",Desc="บิน",Callback=function(v) setFly(v) end})
 Home:Toggle({Title="Auto Warp Gun",Desc="วาร์ปเก็บปืน",Callback=function(v) AUTO_WARP_GUN=v end})
 Home:Toggle({Title="Infinite Jump",Desc="กระโดดไม่จำกัด",Callback=function(v) INFINITE_JUMP=v end})
