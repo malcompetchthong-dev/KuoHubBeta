@@ -1,7 +1,7 @@
 local Window = loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/ITKuo/refs/heads/main/KUOHUBUI.lua"))()
 
 Window:MakeWindow({
-Title = "Kuo Hub|MM2",
+Title = "Kuo Hub | MM2",
 })
 
 Window:AddMinimizeButton({
@@ -10,7 +10,9 @@ Corner = { CornerRadius = UDim.new(35, 1) },
 })
 
 local Home = Window:Tab("Home")
-local Combat = Window:Tab("Combat")
+
+local Combat = Window:MakeTab({"Combat","sword"})
+
 
 Home:Section("Main")
 
@@ -53,8 +55,7 @@ local lastEquip = 0
 local gotGunThisRound = false
 local wasInvisibleBeforeWarp = false
 local SAFE_DISTANCE_GUN = 30
-local Shot_AURA = false
-
+local GunESP = false
 
 -- =========================
 -- FLY
@@ -81,6 +82,19 @@ end
 end)
 
 -- =========================
+-- CLEAN OLD CONNECTION
+-- =========================
+getgenv().KuoESPConnections = getgenv().KuoESPConnections or {}
+
+for _,c in pairs(getgenv().KuoESPConnections) do
+    pcall(function()
+        c:Disconnect()
+    end)
+end
+
+table.clear(getgenv().KuoESPConnections)
+
+-- =========================
 -- SERVICES
 -- =========================
 local Players = game:GetService("Players")
@@ -88,155 +102,268 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
+ESP_ENABLED = ESP_ENABLED or false
+
 -- =========================
 -- ROLE SYSTEM
 -- =========================
 local function getRole(plr)
-local bp = plr:FindFirstChild("Backpack")
-local char = plr.Character
+    local bp = plr:FindFirstChild("Backpack")
+    local char = plr.Character
 
-if bp and bp:FindFirstChild("Knife") then return "Murderer" end
-if bp and bp:FindFirstChild("Gun") then return "Sheriff" end
-if char and char:FindFirstChild("Knife") then return "Murderer" end
-if char and char:FindFirstChild("Gun") then return "Sheriff" end
+    if bp and bp:FindFirstChild("Knife") then
+        return "Murderer"
+    end
 
-return "Innocent"
+    if bp and bp:FindFirstChild("Gun") then
+        return "Sheriff"
+    end
 
+    if char and char:FindFirstChild("Knife") then
+        return "Murderer"
+    end
+
+    if char and char:FindFirstChild("Gun") then
+        return "Sheriff"
+    end
+
+    return "Innocent"
 end
 
 -- =========================
--- CACHE (กันกระพริบ)
+-- CACHE
 -- =========================
 local lastRoles = {}
 
 -- =========================
--- CREATE ESP (สีล้วน)
+-- CREATE ESP
 -- =========================
 local function createESP(char)
-local hl = char:FindFirstChild("KuoHL")
-if not hl then
-hl = Instance.new("Highlight")
-hl.Name = "KuoHL"
-hl.FillTransparency = 0.5
-hl.OutlineTransparency = 0
-hl.Parent = char
-end
+    local hl = char:FindFirstChild("KuoHL")
+
+    if not hl then
+        hl = Instance.new("Highlight")
+        hl.Name = "KuoHL"
+        hl.FillTransparency = 0.5
+        hl.OutlineTransparency = 0
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        hl.Parent = char
+    end
+
+    return hl
 end
 
 -- =========================
--- UPDATE ESP (แค่สี)
+-- UPDATE ESP
 -- =========================
 local function updateESP(char, role)
-local hl = char:FindFirstChild("KuoHL")
-if not hl then return end
+    local hl = createESP(char)
 
-if role == "Murderer" then
--- 🔪 แดง
-hl.FillColor = Color3.fromRGB(255,0,0)
-hl.OutlineColor = Color3.fromRGB(255,0,0)
+    if role == "Murderer" then
 
-elseif role == "Sheriff" then
--- 🔫 ม่วง Kuo Hub
-hl.FillColor = Color3.fromRGB(170,0,255)
-hl.OutlineColor = Color3.fromRGB(170,0,255)
+        hl.FillColor = Color3.fromRGB(255,0,0)
+        hl.OutlineColor = Color3.fromRGB(255,0,0)
 
-else
--- 🟢 Innocent
-hl.FillColor = Color3.fromRGB(0,255,0)
-hl.OutlineColor = Color3.fromRGB(0,255,0)
+    elseif role == "Sheriff" then
+
+        hl.FillColor = Color3.fromRGB(170,0,255)
+        hl.OutlineColor = Color3.fromRGB(170,0,255)
+
+    else
+
+        hl.FillColor = Color3.fromRGB(0,255,0)
+        hl.OutlineColor = Color3.fromRGB(0,255,0)
+
+    end
 end
 
-end
 -- =========================
 -- CLEAR ESP
 -- =========================
 local function clearESP(char)
-if not char then return end
-local hl = char:FindFirstChild("KuoHL")
-if hl then hl:Destroy() end
+    if not char then return end
+
+    local hl = char:FindFirstChild("KuoHL")
+
+    if hl then
+        hl:Destroy()
+    end
 end
 
 -- =========================
--- MAIN LOOP
+-- UPDATE PLAYER
 -- =========================
-RunService.Heartbeat:Connect(function()
-for _, plr in ipairs(Players:GetPlayers()) do
-if plr ~= player then
-local char = plr.Character
+local function updatePlayer(plr)
+    if plr == player then
+        return
+    end
 
-if char then
-if ESP_ENABLED then
-local role = getRole(plr)
+    local char = plr.Character
+    if not char then
+        return
+    end
 
--- 🔥 กันโดนลบ ESP        
-            if not char:FindFirstChild("KuoHL") then        
-                createESP(char)        
-                lastRoles[plr] = nil        
-            end        
+    if ESP_ENABLED then
 
-            -- 🔄 อัปเดตเฉพาะตอน role เปลี่ยน        
-            if lastRoles[plr] ~= role then        
-                lastRoles[plr] = role        
-                updateESP(char, role)        
-            end        
-        else        
-            clearESP(char)        
-        end        
-    end        
+        local role = getRole(plr)
+
+        if lastRoles[plr] ~= role
+        or not char:FindFirstChild("KuoHL") then
+
+            lastRoles[plr] = role
+            updateESP(char, role)
+
+        end
+
+    else
+
+        clearESP(char)
+
+    end
 end
 
-end
-
-end)
-
 -- =========================
--- INIT + CHARACTER SUPPORT
+-- SETUP PLAYER
 -- =========================
 local function setupPlayer(plr)
-if plr == player then return end
 
--- ตอนมีตัวละครอยู่แล้ว
-if plr.Character then
-createESP(plr.Character)
-local role = getRole(plr)
-lastRoles[plr] = role
-updateESP(plr.Character, role)
-end
+    if plr == player then
+        return
+    end
 
--- ตอนเกิดใหม่
-plr.CharacterAdded:Connect(function(char)
-char:WaitForChild("Head")
+    -- character spawn
+    table.insert(
+        getgenv().KuoESPConnections,
 
-if ESP_ENABLED then        
-    createESP(char)        
-    local role = getRole(plr)        
-    lastRoles[plr] = role        
-    updateESP(char, role)        
-end
+        plr.CharacterAdded:Connect(function(char)
 
-end)
+            char:WaitForChild("HumanoidRootPart",5)
 
--- 🔥 role มาใหม่ (เช่น ได้มีด/ปืน)
-plr.ChildAdded:Connect(function()
-lastRoles[plr] = nil
-end)
+            task.wait(1)
 
-if plr:FindFirstChild("Backpack") then
-plr.Backpack.ChildAdded:Connect(function()
-lastRoles[plr] = nil
-end)
-end
+            if ESP_ENABLED then
+                lastRoles[plr] = nil
+                updatePlayer(plr)
+            end
+        end)
+    )
 
+    -- backpack change
+    local function hookBackpack(bp)
+
+        table.insert(
+            getgenv().KuoESPConnections,
+
+            bp.ChildAdded:Connect(function()
+                lastRoles[plr] = nil
+            end)
+        )
+
+        table.insert(
+            getgenv().KuoESPConnections,
+
+            bp.ChildRemoved:Connect(function()
+                lastRoles[plr] = nil
+            end)
+        )
+    end
+
+    if plr:FindFirstChild("Backpack") then
+        hookBackpack(plr.Backpack)
+    end
 end
 
 -- =========================
--- START
+-- LOOP
 -- =========================
-for _, plr in ipairs(Players:GetPlayers()) do
-setupPlayer(plr)
+table.insert(
+    getgenv().KuoESPConnections,
+
+    RunService.Heartbeat:Connect(function()
+
+        for _,plr in ipairs(Players:GetPlayers()) do
+            updatePlayer(plr)
+        end
+
+    end)
+)
+
+-- =========================
+-- PLAYER ADDED
+-- =========================
+for _,plr in ipairs(Players:GetPlayers()) do
+    setupPlayer(plr)
 end
 
-Players.PlayerAdded:Connect(setupPlayer)
+table.insert(
+    getgenv().KuoESPConnections,
+
+    Players.PlayerAdded:Connect(setupPlayer)
+)
+-- =========================
+-- 🔫 GUN ESP
+-- =========================
+
+
+local GunHL = nil
+
+local function removeGunESP()
+    if GunHL then
+        GunHL:Destroy()
+        GunHL = nil
+    end
+end
+
+local function createGunESP(gun)
+
+    removeGunESP()
+
+    local part =
+        gun:IsA("BasePart") and gun
+        or gun:FindFirstChildWhichIsA("BasePart", true)
+
+    if not part then
+        return
+    end
+
+    GunHL = Instance.new("Highlight")
+    GunHL.Name = "KuoGunESP"
+
+    GunHL.FillColor = Color3.fromRGB(0,170,255)
+    GunHL.OutlineColor = Color3.fromRGB(255,255,255)
+
+    GunHL.FillTransparency = 0.2
+    GunHL.OutlineTransparency = 0
+
+    GunHL.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    GunHL.Adornee = gun
+    GunHL.Parent = game.CoreGui
+end
+
+-- =========================
+-- 🔁 LOOP
+-- =========================
+task.spawn(function()
+
+    while task.wait(0.2) do
+
+        if not GunESP then
+            removeGunESP()
+            continue
+        end
+
+        local gun =
+            workspace:FindFirstChild("GunDrop", true)
+            or workspace:FindFirstChild("Gun", true)
+
+        if gun then
+            createGunESP(gun)
+        else
+            removeGunESP()
+        end
+    end
+end)
+
 -- =========================
 -- 🚀 AUTO WARP GUN
 -- =========================
@@ -1036,52 +1163,6 @@ setupCharacter()
 end)
 
 -- =========================
--- ยิงทะลุกำแพง
--- =========================
-
-local function fire(origin, direction)
-    local rayParams = RaycastParams.new()
-    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-    rayParams.FilterDescendantsInstances = {}
-
-    local remainingDistance = 1000
-    local currentOrigin = origin
-    local penetrationCount = 0
-
-    while remainingDistance > 0 do
-        local result = workspace:Raycast(currentOrigin, direction * remainingDistance, rayParams)
-
-        if not result then break end
-
-        print("โดน:", result.Instance.Name)
-
-        -- 🎯 ถ้าโดน Humanoid = ดาเมจ (ตัวอย่าง)
-        local humanoid = result.Instance.Parent:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid:TakeDamage(20)
-            break
-        end
-
-        -- 🔥 ถ้าเปิดยิงทะลุ
-        if Shot_AURA then
-            penetrationCount += 1
-            if penetrationCount > 3 then break end -- จำกัดทะลุ 3 ชั้น
-
-            -- ข้าม object นี้
-            table.insert(rayParams.FilterDescendantsInstances, result.Instance)
-
-            local hitPos = result.Position
-            local distanceTraveled = (hitPos - currentOrigin).Magnitude
-
-            remainingDistance -= distanceTraveled
-            currentOrigin = hitPos + (direction * 0.1)
-        else
-            break
-        end
-    end
-end
-
--- =========================
 -- UI
 -- =========================
 Home:AddDiscordInvite({
@@ -1091,6 +1172,7 @@ Logo = "rbxassetid://126460540157931",
 Invite = "https://discord.gg/Apn2j9Fez",
 })
 Home:Toggle({Title="ESP",Desc="ไฮไลต์ผู้เล่น",Callback=function(v) ESP_ENABLED=v end})
+Home:Toggle({Title ="Gun ESP",Desc ="ไฮไลต์ปืนตก",Callback =function(v) GunESP =v end})                        
 Home:Toggle({Title="Fly",Desc="บิน",Callback=function(v) setFly(v) end})
 Home:Toggle({Title="Auto Warp Gun",Desc="วาร์ปเก็บปืน",Callback=function(v) AUTO_WARP_GUN=v end})
 Home:Toggle({Title="Infinite Jump",Desc="กระโดดไม่จำกัด",Callback=function(v) INFINITE_JUMP=v end})
@@ -1137,20 +1219,169 @@ Anti_Pling = v
 end
 })
 
-Combat:Toggle({
-Title = "Invisible Mode",
-Desc = "ร่องหน",
-Callback = function(v)
-applyInvisible(v)
-end
-})
-  
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local Shot_AURA = false
+
+-- =========================
+-- TOGGLE
+-- =========================
 Combat:Toggle({
     Title = "Shot through the wall",
     Desc = "ยิงทะลุกำแพง",
     Callback = function(v)
         Shot_AURA = v
     end
+})
+
+-- =========================
+-- หา Gun
+-- =========================
+local function getGun()
+    local character = player.Character
+    local backpack = player:FindFirstChild("Backpack")
+
+    if character then
+        for _, v in pairs(character:GetChildren()) do
+            if v:IsA("Tool") and v:FindFirstChild("Shoot") then
+                return v
+            end
+        end
+    end
+
+    if backpack then
+        for _, v in pairs(backpack:GetChildren()) do
+            if v:IsA("Tool") and v:FindFirstChild("Shoot") then
+                return v
+            end
+        end
+    end
+
+    return nil
+end
+
+-- =========================
+-- ถือปืนอัตโนมัติ
+-- =========================
+local function equipGun()
+    local character = player.Character
+    local backpack = player:FindFirstChild("Backpack")
+
+    if not character or not backpack then
+        return nil
+    end
+
+    -- ถืออยู่แล้ว
+    for _, v in pairs(character:GetChildren()) do
+        if v:IsA("Tool") and v:FindFirstChild("Shoot") then
+            return v
+        end
+    end
+
+    -- หาจาก Backpack
+    for _, v in pairs(backpack:GetChildren()) do
+        if v:IsA("Tool") and v:FindFirstChild("Shoot") then
+            v.Parent = character
+            return v
+        end
+    end
+
+    return nil
+end
+
+-- =========================
+-- หาเป้าหมาย
+-- =========================
+local function getTargetBehindWall(origin)
+    local closestTarget = nil
+    local closestDistance = math.huge
+
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+
+            local humanoid = plr.Character:FindFirstChild("Humanoid")
+            local head = plr.Character:FindFirstChild("Head")
+            local root = plr.Character:FindFirstChild("HumanoidRootPart")
+
+            if humanoid and humanoid.Health > 0 and head and root then
+
+                -- 🎲 สุ่มหัว 50% / ตัว 50%
+                local targetPart
+
+                if math.random(1,2) == 1 then
+                    targetPart = head
+                else
+                    targetPart = root
+                end
+
+                local dist = (targetPart.Position - origin).Magnitude
+
+                if dist < closestDistance then
+                    closestDistance = dist
+                    closestTarget = targetPart
+                end
+            end
+        end
+    end
+
+    return closestTarget
+end
+
+-- =========================
+-- ยิงทะลุกำแพง
+-- =========================
+local function fireWall()
+    if not Shot_AURA then
+        return
+    end
+
+    local gun = equipGun()
+
+    -- ❌ ไม่มีปืน
+    if not gun then
+        warn("ไม่พบ Gun")
+        return
+    end
+
+    local shootRemote = gun:FindFirstChild("Shoot")
+    if not shootRemote then
+        return
+    end
+
+    local character = player.Character
+    if not character then
+        return
+    end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return
+    end
+
+    local origin = root.Position
+
+    -- 🎯 หาเป้า
+    local target = getTargetBehindWall(origin)
+    if not target then
+        return
+    end
+
+    local targetPos = target.Position
+
+    -- 🔥 ยิง
+    shootRemote:FireServer(
+        CFrame.new(origin, targetPos),
+        CFrame.new(targetPos)
+    )
+end
+
+Combat:Toggle({
+Title = "Invisible Mode",
+Desc = "ร่องหน",
+Callback = function(v)
+applyInvisible(v)
+end
 })
 
 getgenv().SpeedValue = 16
