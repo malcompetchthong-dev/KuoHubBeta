@@ -31,7 +31,7 @@ local humanoid = character:WaitForChild("Humanoid")
 local root = character:WaitForChild("HumanoidRootPart")
 
 --// SETTINGS
-local flying = false
+local setFly = false
 local speed = 60
 local ESP_ENABLED = false
 local AUTO_WARP_GUN = false
