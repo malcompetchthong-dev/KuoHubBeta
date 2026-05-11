@@ -56,6 +56,7 @@ local gotGunThisRound = false
 local wasInvisibleBeforeWarp = false
 local SAFE_DISTANCE_GUN = 30
 local GunESP = false
+local Shot_AURA = false
 
 -- =========================
 -- FLY
@@ -1163,6 +1164,283 @@ setupCharacter()
 end)
 
 -- =========================
+-- GET GUN
+-- =========================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+-- =========================
+-- GET GUN
+-- =========================
+local function getGun()
+
+    local char = LocalPlayer.Character
+
+    if not char then
+        return nil
+    end
+
+    return char:FindFirstChild("Gun")
+end
+
+-- =========================
+-- EQUIP GUN
+-- =========================
+local lastEquip = 0
+
+local function equipGun()
+
+    if tick() - lastEquip < 0.25 then
+        return
+    end
+
+    lastEquip = tick()
+
+    local char = LocalPlayer.Character
+    local backpack =
+        LocalPlayer:FindFirstChild("Backpack")
+
+    if not char or not backpack then
+        return
+    end
+
+    if not char:FindFirstChild("Gun") then
+
+        local gun =
+            backpack:FindFirstChild("Gun")
+
+        if gun then
+            gun.Parent = char
+        end
+    end
+end
+
+-- =========================
+-- CHECK MURDERER
+-- =========================
+local function isMurderer(model)
+
+    local plr =
+        Players:GetPlayerFromCharacter(model)
+
+    if not plr then
+        return false
+    end
+
+    local bp = plr:FindFirstChild("Backpack")
+    local char = plr.Character
+
+    if (bp and bp:FindFirstChild("Knife")) or
+       (char and char:FindFirstChild("Knife")) then
+
+        return true
+    end
+
+    return false
+end
+
+-- =========================
+-- RANDOM PART
+-- =========================
+local function getRandomPart50(char)
+
+    local head = char:FindFirstChild("Head")
+
+    -- 🎲 HEAD 50%
+    if head and math.random() < 0.5 then
+        return head
+    end
+
+    -- 🎲 BODY 50%
+    local parts = {}
+
+    for _,v in ipairs(char:GetDescendants()) do
+
+        if v:IsA("BasePart")
+        and v.Name ~= "Head" then
+
+            table.insert(parts, v)
+        end
+    end
+
+    if #parts > 0 then
+        return parts[math.random(1,#parts)]
+    end
+
+    return head
+end
+
+-- =========================
+-- PREDICT AIM
+-- =========================
+local function getLeadCFrame(targetChar, originPos)
+
+    local part =
+        getRandomPart50(targetChar)
+
+    local root =
+        targetChar:FindFirstChild(
+            "HumanoidRootPart"
+        )
+
+    if not part or not root then
+        return nil
+    end
+
+    local velocity =
+        root.AssemblyLinearVelocity
+
+    local distance =
+        (part.Position - originPos).Magnitude
+
+    local predictTime =
+        math.clamp(distance / 500, 0.05, 0.18)
+
+    local predictedPos =
+        part.Position + (velocity * predictTime)
+
+    predictedPos =
+        predictedPos
+        + Vector3.new(
+            0,
+            math.clamp(
+                velocity.Y * 0.1,
+                -2,
+                2
+            ),
+            0
+        )
+
+    return CFrame.new(predictedPos)
+end
+
+-- =========================
+-- WALL ORIGIN
+-- =========================
+local function getWallOrigin(targetChar)
+
+    local char = LocalPlayer.Character
+
+    if not char then
+        return nil
+    end
+
+    local root =
+        char:FindFirstChild(
+            "HumanoidRootPart"
+        )
+
+    local targetRoot =
+        targetChar:FindFirstChild(
+            "HumanoidRootPart"
+        )
+
+    if not root or not targetRoot then
+        return nil
+    end
+
+    local direction =
+        (targetRoot.Position
+        - root.Position).Unit
+
+    -- 🔥 จุดยิงใกล้เป้า
+    local pos =
+        targetRoot.Position
+        - (direction * 3)
+
+    return CFrame.new(pos)
+end
+
+-- =========================
+-- FIRE WALL
+-- =========================
+local function fireWall()
+
+    equipGun()
+
+    local gun = getGun()
+
+    if not gun then
+        return
+    end
+
+    local shootEvent =
+        gun:FindFirstChild("Shoot")
+
+    if not shootEvent then
+        return
+    end
+
+    -- 🔥 หา Murderer
+    for _,plr in ipairs(
+        Players:GetPlayers()
+    ) do
+
+        if plr ~= LocalPlayer
+        and plr.Character then
+
+            local char = plr.Character
+
+            local humanoid =
+                char:FindFirstChild(
+                    "Humanoid"
+                )
+
+            if humanoid
+            and humanoid.Health > 0
+            and isMurderer(char) then
+
+                -- 🔥 จุดยิงทะลุกำแพง
+                local originCF =
+                    getWallOrigin(char)
+
+                if not originCF then
+                    continue
+                end
+
+                local targetCF =
+                    getLeadCFrame(
+                        char,
+                        originCF.Position
+                    )
+
+                if targetCF then
+
+                    pcall(function()
+
+                        shootEvent:FireServer(
+                            originCF,
+                            targetCF
+                        )
+
+                    end)
+
+                    break
+                end
+            end
+        end
+    end
+end
+
+-- =========================
+-- LOOP
+-- =========================
+task.spawn(function()
+
+    while task.wait(0.01) do
+
+        if not Shot_AURA then
+            continue
+        end
+
+        pcall(function()
+            fireWall()
+        end)
+
+    end
+end)
+
+-- =========================
 -- UI
 -- =========================
 Home:AddDiscordInvite({
@@ -1219,14 +1497,6 @@ Anti_Pling = v
 end
 })
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
--- =========================
--- TOGGLE
--- =========================
-local Shot_AURA = false
-
 Combat:Toggle({
     Title = "Shot through the wall",
     Desc = "ยิงทะลุกำแพง",
@@ -1234,248 +1504,6 @@ Combat:Toggle({
         Shot_AURA = v
     end
 })
-
--- =========================
--- GET GUN
--- =========================
-local function getGun()
-    local char = LocalPlayer.Character
-    if not char then
-        return nil
-    end
-
-    return char:FindFirstChild("Gun")
-end
-
--- =========================
--- EQUIP GUN
--- =========================
-local lastEquip = 0
-
-local function equipGun()
-
-    if tick() - lastEquip < 0.25 then
-        return
-    end
-
-    lastEquip = tick()
-
-    local char = LocalPlayer.Character
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-
-    if not char or not backpack then
-        return
-    end
-
-    if not char:FindFirstChild("Gun") then
-
-        local gun = backpack:FindFirstChild("Gun")
-
-        if gun then
-            gun.Parent = char
-        end
-    end
-end
-
--- =========================
--- CHECK MURDERER
--- =========================
-local function isMurderer(model)
-
-    local plr =
-        Players:GetPlayerFromCharacter(model)
-
-    if not plr then
-        return false
-    end
-
-    local bp = plr:FindFirstChild("Backpack")
-    local char = plr.Character
-
-    if (bp and bp:FindFirstChild("Knife")) or
-       (char and char:FindFirstChild("Knife")) then
-
-        return true
-    end
-
-    return false
-end
-
--- =========================
--- RANDOM PART
--- =========================
-local function getRandomPart50(char)
-
-    local head = char:FindFirstChild("Head")
-
-    -- 🎲 50% ยิงหัว
-    if head and math.random() < 0.5 then
-        return head
-    end
-
-    -- 🎲 50% ยิงตัว
-    local parts = {}
-
-    for _,v in ipairs(char:GetDescendants()) do
-        if v:IsA("BasePart")
-        and v.Name ~= "Head" then
-
-            table.insert(parts, v)
-        end
-    end
-
-    if #parts > 0 then
-        return parts[math.random(1,#parts)]
-    end
-
-    return head
-end
-
--- =========================
--- PREDICT AIM
--- =========================
-local function getLeadCFrame(targetChar, originPos)
-
-    local part =
-        getRandomPart50(targetChar)
-
-    local root =
-        targetChar:FindFirstChild("HumanoidRootPart")
-
-    if not part or not root then
-        return nil
-    end
-
-    local velocity =
-        root.AssemblyLinearVelocity
-
-    local distance =
-        (part.Position - originPos).Magnitude
-
-    local predictTime =
-        math.clamp(distance / 300, 0.08, 0.2)
-
-    local predictedPos =
-        part.Position + (velocity * predictTime)
-
-    predictedPos =
-        predictedPos
-        + Vector3.new(
-            0,
-            math.clamp(velocity.Y * 0.1, -2, 2),
-            0
-        )
-
-    return CFrame.new(predictedPos)
-end
-
--- =========================
--- FRONT ORIGIN (7 STUDS)
--- =========================
-local function getFrontOrigin()
-
-    local char = LocalPlayer.Character
-    if not char then
-        return nil
-    end
-
-    local root =
-        char:FindFirstChild("HumanoidRootPart")
-
-    if not root then
-        return nil
-    end
-
-    local pos =
-        root.Position
-        + (root.CFrame.LookVector * 7)
-        + Vector3.new(0,2,0)
-
-    return CFrame.new(pos)
-end
-
--- =========================
--- FIRE WALL
--- =========================
-local function fireWall()
-
-    equipGun()
-
-    local gun = getGun()
-    if not gun then
-        return
-    end
-
-    local shootEvent =
-        gun:FindFirstChild("Shoot")
-
-    if not shootEvent then
-        return
-    end
-
-    -- 🔥 จุดยิงหน้าผู้เล่น 7 studs
-    local originCF = getFrontOrigin()
-
-    if not originCF then
-        return
-    end
-
-    -- 🔥 หา Murderer
-    for _,plr in ipairs(Players:GetPlayers()) do
-
-        if plr ~= LocalPlayer
-        and plr.Character then
-
-            local char = plr.Character
-
-            local humanoid =
-                char:FindFirstChild("Humanoid")
-
-            if humanoid
-            and humanoid.Health > 0
-            and isMurderer(char) then
-
-                local targetCF =
-                    getLeadCFrame(
-                        char,
-                        originCF.Position
-                    )
-
-                if targetCF then
-
-                    pcall(function()
-
-                        shootEvent:FireServer(
-                            originCF,
-                            targetCF
-                        )
-
-                    end)
-
-                    break
-                end
-            end
-        end
-    end
-end
-
--- =========================
--- LOOP
--- =========================
-task.spawn(function()
-
-    while task.wait(0.01) do
-
-        if not Shot_AURA then
-            continue
-        end
-
-        pcall(function()
-            fireWall()
-        end)
-
-    end
-end)
 
 Combat:Toggle({
 Title = "Invisible Mode",
