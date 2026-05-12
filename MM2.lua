@@ -1240,34 +1240,34 @@ local function isMurderer(model)
 end
 
 -- =========================
--- RANDOM PART
+-- BODY ONLY
 -- =========================
-local function getRandomPart50(char)
+local function getRandomPart(char)
 
-    local head = char:FindFirstChild("Head")
+    -- ยิง HumanoidRootPart ก่อน
+    local hrp = char:FindFirstChild("HumanoidRootPart")
 
-    -- 🎲 HEAD 50%
-    if head and math.random() < 0.5 then
-        return head
+    if hrp then
+        return hrp
     end
 
-    -- 🎲 BODY 50%
-    local parts = {}
+    -- ถ้าไม่มี ใช้ UpperTorso
+    local upper =
+        char:FindFirstChild("UpperTorso")
 
-    for _,v in ipairs(char:GetDescendants()) do
-
-        if v:IsA("BasePart")
-        and v.Name ~= "Head" then
-
-            table.insert(parts, v)
-        end
+    if upper then
+        return upper
     end
 
-    if #parts > 0 then
-        return parts[math.random(1,#parts)]
+    -- R6 fallback
+    local torso =
+        char:FindFirstChild("Torso")
+
+    if torso then
+        return torso
     end
 
-    return head
+    return nil
 end
 
 -- =========================
@@ -1276,7 +1276,7 @@ end
 local function getLeadCFrame(targetChar, originPos)
 
     local part =
-        getRandomPart50(targetChar)
+        getRandomPart(targetChar)
 
     local root =
         targetChar:FindFirstChild(
@@ -1343,7 +1343,7 @@ local function getWallOrigin(targetChar)
         (targetRoot.Position
         - root.Position).Unit
 
-    -- 🔥 จุดยิงใกล้เป้า
+    -- จุดยิงใกล้เป้า
     local pos =
         targetRoot.Position
         - (direction * 3)
@@ -1371,7 +1371,7 @@ local function fireWall()
         return
     end
 
-    -- 🔥 หา Murderer
+    -- หา Murderer
     for _,plr in ipairs(
         Players:GetPlayers()
     ) do
@@ -1390,7 +1390,6 @@ local function fireWall()
             and humanoid.Health > 0
             and isMurderer(char) then
 
-                -- 🔥 จุดยิงทะลุกำแพง
                 local originCF =
                     getWallOrigin(char)
 
@@ -1490,7 +1489,7 @@ end
 })
 
 Home:Toggle({
-Title="Anti-Pling",
+Title="Anti-Fling",
 Desc="กันปลิง",
 Callback=function(v)
 Anti_Pling = v
@@ -1498,7 +1497,7 @@ end
 })
 
 Combat:Toggle({
-    Title = "Shot through the wall",
+    Title = "Shoot through the wall",
     Desc = "ยิงทะลุกำแพง",
     Callback = function(v)
         Shot_AURA = v
