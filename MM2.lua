@@ -54,7 +54,7 @@ local LOOP_DELAY = 0.1
 local lastEquip = 0
 local gotGunThisRound = false
 local wasInvisibleBeforeWarp = false
-local SAFE_DISTANCE_GUN = 30
+local SAFE_DISTANCE_GUN = 2
 local GunESP = false
 local Shot_AURA = false
 
