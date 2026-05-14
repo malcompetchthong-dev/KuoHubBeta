@@ -51,7 +51,8 @@ local Anti_Pling = false
 local AUTO_PUSH = false
 local AUTO_LEECH_MURDER = false
 local LOOP_DELAY = 0.1
-local lastEquip = 0
+local lastKnifeEquip = 0
+local lastGunEquip = 0
 local gotGunThisRound = false
 local wasInvisibleBeforeWarp = false
 local SAFE_DISTANCE_GUN = 2
@@ -661,8 +662,8 @@ end
 -- 🔥 AUTO EQUIP KNIFE
 -- =========================
 local function equipKnife()
-if tick() - lastEquip < 0.3 then return end
-lastEquip = tick()
+if tick() - lastKnifeEquip < 0.3 then return end
+lastKnifeEquip = tick()
 
 local char = getChar()
 local backpack = player:FindFirstChild("Backpack")
@@ -1169,6 +1170,25 @@ end)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+
+-- =========================
+-- AIM SETTINGS
+-- =========================
+local AIMBOT_CONFIG = {
+
+    -- ⚡ Predict ยิงไกล
+    Prediction = 0.07,
+
+    -- 🌍 ชดเชยแรงโน้มถ่วง
+    GravityCompensation = 0.012,
+
+    -- 🎲 Randomization
+    Randomness = 0.008,
+
+    -- ⚡ ความเร็วลูป
+    ShootDelay = 0.003,
+}
+
 -- =========================
 -- GET GUN
 -- =========================
@@ -1184,17 +1204,17 @@ local function getGun()
 end
 
 -- =========================
--- EQUIP GUN
+-- AUTO EQUIP GUN
 -- =========================
-local lastEquip = 0
+local lastGunEquip = 0
 
 local function equipGun()
 
-    if tick() - lastEquip < 0.25 then
+    if tick() - lastGunEquip < 0.25 then
         return
     end
 
-    lastEquip = tick()
+    lastGunEquip = tick()
 
     local char = LocalPlayer.Character
     local backpack =
@@ -1240,50 +1260,39 @@ local function isMurderer(model)
 end
 
 -- =========================
--- BODY ONLY
+-- BODY AIM 100%
 -- =========================
-local function getRandomPart(char)
+local function getSmartPart(targetChar)
 
-    -- ยิง HumanoidRootPart ก่อน
-    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hrp =
+        targetChar:FindFirstChild(
+            "HumanoidRootPart"
+        )
 
     if hrp then
         return hrp
     end
 
-    -- ถ้าไม่มี ใช้ UpperTorso
-    local upper =
-        char:FindFirstChild("UpperTorso")
-
-    if upper then
-        return upper
-    end
-
-    -- R6 fallback
-    local torso =
-        char:FindFirstChild("Torso")
-
-    if torso then
-        return torso
-    end
-
-    return nil
+    return targetChar:FindFirstChild("Head")
 end
 
 -- =========================
--- PREDICT AIM
+-- ULTRA PREDICTION
 -- =========================
-local function getLeadCFrame(targetChar, originPos)
+local function getUltraPrediction(
+    targetChar,
+    originPos
+)
 
-    local part =
-        getRandomPart(targetChar)
+    local targetPart =
+        getSmartPart(targetChar)
 
     local root =
         targetChar:FindFirstChild(
             "HumanoidRootPart"
         )
 
-    if not part or not root then
+    if not targetPart or not root then
         return nil
     end
 
@@ -1291,25 +1300,47 @@ local function getLeadCFrame(targetChar, originPos)
         root.AssemblyLinearVelocity
 
     local distance =
-        (part.Position - originPos).Magnitude
+        (targetPart.Position
+        - originPos).Magnitude
 
-    local predictTime =
-        math.clamp(distance / 500, 0.05, 0.18)
+    -- ⚡ Predict
+    local travelTime =
+        distance
+        * AIMBOT_CONFIG.Prediction
+        / 100
 
     local predictedPos =
-        part.Position + (velocity * predictTime)
+        targetPart.Position
+        + (velocity * travelTime)
 
+    -- 🌍 Gravity Compensation
     predictedPos =
         predictedPos
         + Vector3.new(
             0,
-            math.clamp(
-                velocity.Y * 0.1,
-                -2,
-                2
-            ),
+            distance
+            * AIMBOT_CONFIG.GravityCompensation,
             0
         )
+
+    -- 🎲 Randomization
+    predictedPos =
+        predictedPos
+        + Vector3.new(
+            math.random(-100,100)
+            * AIMBOT_CONFIG.Randomness,
+
+            math.random(-100,100)
+            * AIMBOT_CONFIG.Randomness,
+
+            math.random(-100,100)
+            * AIMBOT_CONFIG.Randomness
+        )
+
+    -- 🔥 ยิงกลางตัว
+    predictedPos =
+        predictedPos
+        + Vector3.new(0, -0.2, 0)
 
     return CFrame.new(predictedPos)
 end
@@ -1343,7 +1374,7 @@ local function getWallOrigin(targetChar)
         (targetRoot.Position
         - root.Position).Unit
 
-    -- จุดยิงใกล้เป้า
+    -- 🔥 จุดยิงทะลุกำแพง
     local pos =
         targetRoot.Position
         - (direction * 3)
@@ -1371,7 +1402,7 @@ local function fireWall()
         return
     end
 
-    -- หา Murderer
+    -- 🔥 หา Murderer
     for _,plr in ipairs(
         Players:GetPlayers()
     ) do
@@ -1390,6 +1421,7 @@ local function fireWall()
             and humanoid.Health > 0
             and isMurderer(char) then
 
+                -- 🔥 จุดยิงทะลุกำแพง
                 local originCF =
                     getWallOrigin(char)
 
@@ -1398,7 +1430,7 @@ local function fireWall()
                 end
 
                 local targetCF =
-                    getLeadCFrame(
+                    getUltraPrediction(
                         char,
                         originCF.Position
                     )
@@ -1426,7 +1458,9 @@ end
 -- =========================
 task.spawn(function()
 
-    while task.wait(0.01) do
+    while task.wait(
+        AIMBOT_CONFIG.ShootDelay
+    ) do
 
         if not Shot_AURA then
             continue
