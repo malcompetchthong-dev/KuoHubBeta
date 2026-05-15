@@ -86,9 +86,12 @@ end)
 -- =========================
 -- CLEAN OLD CONNECTION
 -- =========================
-getgenv().KuoESPConnections = getgenv().KuoESPConnections or {}
+getgenv().KuoESPConnections =
+    getgenv().KuoESPConnections or {}
 
-for _,c in pairs(getgenv().KuoESPConnections) do
+for _,c in pairs(
+    getgenv().KuoESPConnections
+) do
     pcall(function()
         c:Disconnect()
     end)
@@ -99,93 +102,212 @@ table.clear(getgenv().KuoESPConnections)
 -- =========================
 -- SERVICES
 -- =========================
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local Players =
+    game:GetService("Players")
 
-local player = Players.LocalPlayer
+local RunService =
+    game:GetService("RunService")
 
-ESP_ENABLED = ESP_ENABLED or false
+local Camera =
+    workspace.CurrentCamera
+
+local player =
+    Players.LocalPlayer
+
+ESP_ENABLED =
+    ESP_ENABLED or false
 
 -- =========================
--- ROLE SYSTEM
+-- SETTINGS
 -- =========================
-local function getRole(plr)
-    local bp = plr:FindFirstChild("Backpack")
-    local char = plr.Character
+local ESP_CONFIG = {
 
-    if bp and bp:FindFirstChild("Knife") then
-        return "Murderer"
+    MaxDistance = math.huge,
+
+    ShowNames = true,
+    ShowDistance = true,
+    ShowTracer = true,
+    ShowHealth = true,
+
+    -- 🔥 PLAYER COLOR
+    Highlight = true,
+
+    FillTransparency = 0.55,
+    OutlineTransparency = 0,
+}
+
+-- =========================
+-- ROLE COLORS
+-- =========================
+local ROLE_COLORS = {
+
+    Murderer =
+        Color3.fromRGB(255,0,0),
+
+    Sheriff =
+        Color3.fromRGB(0,170,255),
+
+    Innocent =
+        Color3.fromRGB(0,255,120),
+}
+
+-- =========================
+-- ROLE CACHE
+-- =========================
+local RoleCache = {}
+
+-- =========================
+-- UPDATE ROLE
+-- =========================
+local function updateRole(plr)
+
+    local role = "Innocent"
+
+    local char =
+        plr.Character
+
+    local bp =
+        plr:FindFirstChild("Backpack")
+
+    local function checkContainer(container)
+
+        if not container then
+            return nil
+        end
+
+        for _,tool in ipairs(
+            container:GetChildren()
+        ) do
+
+            if tool:IsA("Tool") then
+
+                local name =
+                    string.lower(tool.Name)
+
+                if name == "knife"
+                or name:find("knife") then
+
+                    return "Murderer"
+                end
+
+                if name == "gun"
+                or name:find("gun")
+                or name:find("revolver") then
+
+                    return "Sheriff"
+                end
+            end
+        end
     end
 
-    if bp and bp:FindFirstChild("Gun") then
-        return "Sheriff"
-    end
+    local charRole =
+        checkContainer(char)
 
-    if char and char:FindFirstChild("Knife") then
-        return "Murderer"
-    end
+    if charRole then
 
-    if char and char:FindFirstChild("Gun") then
-        return "Sheriff"
-    end
-
-    return "Innocent"
-end
-
--- =========================
--- CACHE
--- =========================
-local lastRoles = {}
-
--- =========================
--- CREATE ESP
--- =========================
-local function createESP(char)
-    local hl = char:FindFirstChild("KuoHL")
-
-    if not hl then
-        hl = Instance.new("Highlight")
-        hl.Name = "KuoHL"
-        hl.FillTransparency = 0.5
-        hl.OutlineTransparency = 0
-        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        hl.Parent = char
-    end
-
-    return hl
-end
-
--- =========================
--- UPDATE ESP
--- =========================
-local function updateESP(char, role)
-    local hl = createESP(char)
-
-    if role == "Murderer" then
-
-        hl.FillColor = Color3.fromRGB(255,0,0)
-        hl.OutlineColor = Color3.fromRGB(255,0,0)
-
-    elseif role == "Sheriff" then
-
-        hl.FillColor = Color3.fromRGB(170,0,255)
-        hl.OutlineColor = Color3.fromRGB(170,0,255)
+        role = charRole
 
     else
 
-        hl.FillColor = Color3.fromRGB(0,255,0)
-        hl.OutlineColor = Color3.fromRGB(0,255,0)
+        local bpRole =
+            checkContainer(bp)
 
+        if bpRole then
+            role = bpRole
+        end
+    end
+
+    RoleCache[plr] = role
+end
+
+-- =========================
+-- GET ROLE
+-- =========================
+local function getRole(plr)
+
+    return RoleCache[plr]
+        or "Innocent"
+end
+
+-- =========================
+-- ESP CACHE
+-- =========================
+local ESPCache = {}
+
+-- =========================
+-- CREATE DRAWINGS
+-- =========================
+local function createDrawings(plr)
+
+    if ESPCache[plr] then
+        return ESPCache[plr]
+    end
+
+    local cache = {}
+
+    -- 🏷️ NAME
+    cache.Name =
+        Drawing.new("Text")
+
+    cache.Name.Center = true
+    cache.Name.Size = 16
+    cache.Name.Outline = true
+    cache.Name.Font = 2
+
+    -- 📏 DISTANCE
+    cache.Distance =
+        Drawing.new("Text")
+
+    cache.Distance.Center = true
+    cache.Distance.Size = 13
+    cache.Distance.Outline = true
+    cache.Distance.Font = 2
+
+    -- ❤️ HEALTH
+    cache.Health =
+        Drawing.new("Text")
+
+    cache.Health.Center = true
+    cache.Health.Size = 13
+    cache.Health.Outline = true
+    cache.Health.Font = 2
+
+    -- 👀 TRACER
+    cache.Tracer =
+        Drawing.new("Line")
+
+    cache.Tracer.Thickness = 1.2
+
+    ESPCache[plr] = cache
+
+    return cache
+end
+
+-- =========================
+-- HIDE DRAWINGS
+-- =========================
+local function hideDrawings(cache)
+
+    if not cache then
+        return
+    end
+
+    for _,v in pairs(cache) do
+        v.Visible = false
     end
 end
 
 -- =========================
--- CLEAR ESP
+-- REMOVE HIGHLIGHT
 -- =========================
-local function clearESP(char)
-    if not char then return end
+local function removeHighlight(char)
 
-    local hl = char:FindFirstChild("KuoHL")
+    if not char then
+        return
+    end
+
+    local hl =
+        char:FindFirstChild("KuoHL")
 
     if hl then
         hl:Destroy()
@@ -193,39 +315,228 @@ local function clearESP(char)
 end
 
 -- =========================
--- UPDATE PLAYER
+-- CREATE HIGHLIGHT
 -- =========================
-local function updatePlayer(plr)
-    if plr == player then
+local function createHighlight(
+    char,
+    color
+)
+
+    if not ESP_CONFIG.Highlight then
         return
     end
 
-    local char = plr.Character
-    if not char then
-        return
+    local hl =
+        char:FindFirstChild("KuoHL")
+
+    if not hl then
+
+        hl = Instance.new("Highlight")
+
+        hl.Name = "KuoHL"
+
+        hl.DepthMode =
+            Enum.HighlightDepthMode.AlwaysOnTop
+
+        hl.Parent = char
     end
 
-    if ESP_ENABLED then
+    hl.FillTransparency =
+        ESP_CONFIG.FillTransparency
 
-        local role = getRole(plr)
+    hl.OutlineTransparency =
+        ESP_CONFIG.OutlineTransparency
 
-        if lastRoles[plr] ~= role
-        or not char:FindFirstChild("KuoHL") then
+    hl.FillColor = color
+    hl.OutlineColor = color
+end
 
-            lastRoles[plr] = role
-            updateESP(char, role)
+-- =========================
+-- REMOVE ESP
+-- =========================
+local function removeESP(plr)
 
+    local cache =
+        ESPCache[plr]
+
+    if cache then
+
+        hideDrawings(cache)
+
+        for _,obj in pairs(cache) do
+            pcall(function()
+                obj:Remove()
+            end)
         end
+    end
 
-    else
+    ESPCache[plr] = nil
 
-        clearESP(char)
-
+    if plr.Character then
+        removeHighlight(plr.Character)
     end
 end
 
 -- =========================
--- SETUP PLAYER
+-- UPDATE ESP
+-- =========================
+local function updateESP(plr)
+
+    if plr == player then
+        return
+    end
+
+    local char =
+        plr.Character
+
+    if not char then
+        removeESP(plr)
+        return
+    end
+
+    local root =
+        char:FindFirstChild(
+            "HumanoidRootPart"
+        )
+
+    local humanoid =
+        char:FindFirstChild(
+            "Humanoid"
+        )
+
+    if not root
+    or not humanoid
+    or humanoid.Health <= 0 then
+
+        removeESP(plr)
+        return
+    end
+
+    -- 🔥 ESP OFF = ลบทุกอย่าง
+    if not ESP_ENABLED then
+
+        local cache =
+            ESPCache[plr]
+
+        if cache then
+            hideDrawings(cache)
+        end
+
+        removeHighlight(char)
+
+        return
+    end
+
+    local pos,visible =
+        Camera:WorldToViewportPoint(
+            root.Position
+        )
+
+    local cache =
+        createDrawings(plr)
+
+    if not visible then
+
+        hideDrawings(cache)
+
+        removeHighlight(char)
+
+        return
+    end
+
+    local role =
+        getRole(plr)
+
+    local color =
+        ROLE_COLORS[role]
+
+    local distance =
+        (root.Position
+        - Camera.CFrame.Position).Magnitude
+
+    -- 🔥 PLAYER COLOR
+    createHighlight(char, color)
+
+    -- =========================
+    -- NAME
+    -- =========================
+    cache.Name.Visible =
+        ESP_CONFIG.ShowNames
+
+    cache.Name.Text =
+        "["..role.."] "..plr.Name
+
+    cache.Name.Position =
+        Vector2.new(
+            pos.X,
+            pos.Y - 35
+        )
+
+    cache.Name.Color =
+        color
+
+    -- =========================
+    -- DISTANCE
+    -- =========================
+    cache.Distance.Visible =
+        ESP_CONFIG.ShowDistance
+
+    cache.Distance.Text =
+        math.floor(distance)
+        .."m"
+
+    cache.Distance.Position =
+        Vector2.new(
+            pos.X,
+            pos.Y + 18
+        )
+
+    cache.Distance.Color =
+        color
+
+    -- =========================
+    -- HEALTH
+    -- =========================
+    cache.Health.Visible =
+        ESP_CONFIG.ShowHealth
+
+    cache.Health.Text =
+        math.floor(humanoid.Health)
+        .." HP"
+
+    cache.Health.Position =
+        Vector2.new(
+            pos.X,
+            pos.Y + 34
+        )
+
+    cache.Health.Color =
+        Color3.fromRGB(0,255,0)
+
+    -- =========================
+    -- TRACER
+    -- =========================
+    cache.Tracer.Visible =
+        ESP_CONFIG.ShowTracer
+
+    cache.Tracer.From =
+        Vector2.new(
+            Camera.ViewportSize.X / 2,
+            Camera.ViewportSize.Y
+        )
+
+    cache.Tracer.To =
+        Vector2.new(
+            pos.X,
+            pos.Y
+        )
+
+    cache.Tracer.Color =
+        color
+end
+
+-- =========================
+-- PLAYER SETUP
 -- =========================
 local function setupPlayer(plr)
 
@@ -233,74 +544,135 @@ local function setupPlayer(plr)
         return
     end
 
-    -- character spawn
+    updateRole(plr)
+
+    -- CHARACTER ADDED
     table.insert(
         getgenv().KuoESPConnections,
 
-        plr.CharacterAdded:Connect(function(char)
+        plr.CharacterAdded:Connect(
+            function(char)
 
-            char:WaitForChild("HumanoidRootPart",5)
+                task.wait(0.2)
 
-            task.wait(1)
+                updateRole(plr)
 
-            if ESP_ENABLED then
-                lastRoles[plr] = nil
-                updatePlayer(plr)
+                char.ChildAdded:Connect(
+                    function(obj)
+
+                        if obj:IsA("Tool") then
+                            updateRole(plr)
+                        end
+                    end
+                )
+
+                char.ChildRemoved:Connect(
+                    function(obj)
+
+                        if obj:IsA("Tool") then
+                            updateRole(plr)
+                        end
+                    end
+                )
+
+                if ESP_ENABLED then
+                    updateESP(plr)
+                end
             end
-        end)
+        )
     )
 
-    -- backpack change
-    local function hookBackpack(bp)
+    -- CHARACTER REMOVING
+    table.insert(
+        getgenv().KuoESPConnections,
 
-        table.insert(
-            getgenv().KuoESPConnections,
-
-            bp.ChildAdded:Connect(function()
-                lastRoles[plr] = nil
-            end)
+        plr.CharacterRemoving:Connect(
+            function()
+                removeESP(plr)
+            end
         )
+    )
 
-        table.insert(
-            getgenv().KuoESPConnections,
+    -- BACKPACK
+    local bp =
+        plr:WaitForChild("Backpack")
 
-            bp.ChildRemoved:Connect(function()
-                lastRoles[plr] = nil
-            end)
+    table.insert(
+        getgenv().KuoESPConnections,
+
+        bp.ChildAdded:Connect(
+            function(obj)
+
+                if obj:IsA("Tool") then
+                    updateRole(plr)
+                end
+            end
         )
-    end
+    )
 
-    if plr:FindFirstChild("Backpack") then
-        hookBackpack(plr.Backpack)
-    end
+    table.insert(
+        getgenv().KuoESPConnections,
+
+        bp.ChildRemoved:Connect(
+            function(obj)
+
+                if obj:IsA("Tool") then
+                    updateRole(plr)
+                end
+            end
+        )
+    )
 end
 
 -- =========================
--- LOOP
+-- INIT PLAYERS
 -- =========================
-table.insert(
-    getgenv().KuoESPConnections,
-
-    RunService.Heartbeat:Connect(function()
-
-        for _,plr in ipairs(Players:GetPlayers()) do
-            updatePlayer(plr)
-        end
-
-    end)
-)
-
--- =========================
--- PLAYER ADDED
--- =========================
-for _,plr in ipairs(Players:GetPlayers()) do
+for _,plr in ipairs(
+    Players:GetPlayers()
+) do
     setupPlayer(plr)
 end
 
+-- PLAYER ADDED
 table.insert(
     getgenv().KuoESPConnections,
 
-    Players.PlayerAdded:Connect(setupPlayer)
+    Players.PlayerAdded:Connect(
+        setupPlayer
+    )
+)
+
+-- PLAYER REMOVED
+table.insert(
+    getgenv().KuoESPConnections,
+
+    Players.PlayerRemoving:Connect(
+        removeESP
+    )
+)
+
+-- =========================
+-- MAIN LOOP
+-- =========================
+table.insert(
+    getgenv().KuoESPConnections,
+
+    RunService.RenderStepped:Connect(
+        function()
+
+            for _,plr in ipairs(
+                Players:GetPlayers()
+            ) do
+
+                pcall(function()
+
+                    updateRole(plr)
+                    updateESP(plr)
+
+                end)
+            end
+        end
+    )
 )
 -- =========================
 -- 🔫 GUN ESP
