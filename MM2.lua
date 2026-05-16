@@ -13,7 +13,6 @@ local Home = Window:Tab("Home")
 
 local Combat = Window:MakeTab({"Combat","sword"})
 
-
 Home:Section("Main")
 
 repeat task.wait() until game:IsLoaded()
@@ -87,14 +86,14 @@ end)
 -- CLEAN OLD CONNECTION
 -- =========================
 getgenv().KuoESPConnections =
-    getgenv().KuoESPConnections or {}
+getgenv().KuoESPConnections or {}
 
 for _,c in pairs(
-    getgenv().KuoESPConnections
+getgenv().KuoESPConnections
 ) do
-    pcall(function()
-        c:Disconnect()
-    end)
+pcall(function()
+c:Disconnect()
+end)
 end
 
 table.clear(getgenv().KuoESPConnections)
@@ -103,37 +102,38 @@ table.clear(getgenv().KuoESPConnections)
 -- SERVICES
 -- =========================
 local Players =
-    game:GetService("Players")
+game:GetService("Players")
 
 local RunService =
-    game:GetService("RunService")
+game:GetService("RunService")
 
 local Camera =
-    workspace.CurrentCamera
+workspace.CurrentCamera
 
 local player =
-    Players.LocalPlayer
+Players.LocalPlayer
 
 ESP_ENABLED =
-    ESP_ENABLED or false
+ESP_ENABLED or false
 
 -- =========================
 -- SETTINGS
 -- =========================
 local ESP_CONFIG = {
 
-    MaxDistance = math.huge,
+MaxDistance = math.huge,  
 
-    ShowNames = true,
-    ShowDistance = true,
-    ShowTracer = true,
-    ShowHealth = true,
+ShowNames = true,  
+ShowDistance = true,  
+ShowTracer = true,  
+ShowHealth = true,  
 
-    -- 🔥 PLAYER COLOR
-    Highlight = true,
+-- 🔥 PLAYER COLOR  
+Highlight = true,  
 
-    FillTransparency = 0.55,
-    OutlineTransparency = 0,
+FillTransparency = 0.55,  
+OutlineTransparency = 0,
+
 }
 
 -- =========================
@@ -141,14 +141,15 @@ local ESP_CONFIG = {
 -- =========================
 local ROLE_COLORS = {
 
-    Murderer =
-        Color3.fromRGB(255,0,0),
+Murderer =  
+    Color3.fromRGB(255,0,0),  
 
-    Sheriff =
-        Color3.fromRGB(0,170,255),
+Sheriff =  
+    Color3.fromRGB(0,170,255),  
 
-    Innocent =
-        Color3.fromRGB(0,255,120),
+Innocent =  
+    Color3.fromRGB(0,255,120),
+
 }
 
 -- =========================
@@ -161,63 +162,64 @@ local RoleCache = {}
 -- =========================
 local function updateRole(plr)
 
-    local role = "Innocent"
+local role = "Innocent"  
 
-    local char =
-        plr.Character
+local char =  
+    plr.Character  
 
-    local bp =
-        plr:FindFirstChild("Backpack")
+local bp =  
+    plr:FindFirstChild("Backpack")  
 
-    local function checkContainer(container)
+local function checkContainer(container)  
 
-        if not container then
-            return nil
-        end
+    if not container then  
+        return nil  
+    end  
 
-        for _,tool in ipairs(
-            container:GetChildren()
-        ) do
+    for _,tool in ipairs(  
+        container:GetChildren()  
+    ) do  
 
-            if tool:IsA("Tool") then
+        if tool:IsA("Tool") then  
 
-                local name =
-                    string.lower(tool.Name)
+            local name =  
+                string.lower(tool.Name)  
 
-                if name == "knife"
-                or name:find("knife") then
+            if name == "knife"  
+            or name:find("knife") then  
 
-                    return "Murderer"
-                end
+                return "Murderer"  
+            end  
 
-                if name == "gun"
-                or name:find("gun")
-                or name:find("revolver") then
+            if name == "gun"  
+            or name:find("gun")  
+            or name:find("revolver") then  
 
-                    return "Sheriff"
-                end
-            end
-        end
-    end
+                return "Sheriff"  
+            end  
+        end  
+    end  
+end  
 
-    local charRole =
-        checkContainer(char)
+local charRole =  
+    checkContainer(char)  
 
-    if charRole then
+if charRole then  
 
-        role = charRole
+    role = charRole  
 
-    else
+else  
 
-        local bpRole =
-            checkContainer(bp)
+    local bpRole =  
+        checkContainer(bp)  
 
-        if bpRole then
-            role = bpRole
-        end
-    end
+    if bpRole then  
+        role = bpRole  
+    end  
+end  
 
-    RoleCache[plr] = role
+RoleCache[plr] = role
+
 end
 
 -- =========================
@@ -225,8 +227,9 @@ end
 -- =========================
 local function getRole(plr)
 
-    return RoleCache[plr]
-        or "Innocent"
+return RoleCache[plr]  
+    or "Innocent"
+
 end
 
 -- =========================
@@ -239,48 +242,49 @@ local ESPCache = {}
 -- =========================
 local function createDrawings(plr)
 
-    if ESPCache[plr] then
-        return ESPCache[plr]
-    end
+if ESPCache[plr] then  
+    return ESPCache[plr]  
+end  
 
-    local cache = {}
+local cache = {}  
 
-    -- 🏷️ NAME
-    cache.Name =
-        Drawing.new("Text")
+-- 🏷️ NAME  
+cache.Name =  
+    Drawing.new("Text")  
 
-    cache.Name.Center = true
-    cache.Name.Size = 16
-    cache.Name.Outline = true
-    cache.Name.Font = 2
+cache.Name.Center = true  
+cache.Name.Size = 16  
+cache.Name.Outline = true  
+cache.Name.Font = 2  
 
-    -- 📏 DISTANCE
-    cache.Distance =
-        Drawing.new("Text")
+-- 📏 DISTANCE  
+cache.Distance =  
+    Drawing.new("Text")  
 
-    cache.Distance.Center = true
-    cache.Distance.Size = 13
-    cache.Distance.Outline = true
-    cache.Distance.Font = 2
+cache.Distance.Center = true  
+cache.Distance.Size = 13  
+cache.Distance.Outline = true  
+cache.Distance.Font = 2  
 
-    -- ❤️ HEALTH
-    cache.Health =
-        Drawing.new("Text")
+-- ❤️ HEALTH  
+cache.Health =  
+    Drawing.new("Text")  
 
-    cache.Health.Center = true
-    cache.Health.Size = 13
-    cache.Health.Outline = true
-    cache.Health.Font = 2
+cache.Health.Center = true  
+cache.Health.Size = 13  
+cache.Health.Outline = true  
+cache.Health.Font = 2  
 
-    -- 👀 TRACER
-    cache.Tracer =
-        Drawing.new("Line")
+-- 👀 TRACER  
+cache.Tracer =  
+    Drawing.new("Line")  
 
-    cache.Tracer.Thickness = 1.2
+cache.Tracer.Thickness = 1.2  
 
-    ESPCache[plr] = cache
+ESPCache[plr] = cache  
 
-    return cache
+return cache
+
 end
 
 -- =========================
@@ -288,13 +292,14 @@ end
 -- =========================
 local function hideDrawings(cache)
 
-    if not cache then
-        return
-    end
+if not cache then  
+    return  
+end  
 
-    for _,v in pairs(cache) do
-        v.Visible = false
-    end
+for _,v in pairs(cache) do  
+    v.Visible = false  
+end
+
 end
 
 -- =========================
@@ -302,53 +307,55 @@ end
 -- =========================
 local function removeHighlight(char)
 
-    if not char then
-        return
-    end
+if not char then  
+    return  
+end  
 
-    local hl =
-        char:FindFirstChild("KuoHL")
+local hl =  
+    char:FindFirstChild("KuoHL")  
 
-    if hl then
-        hl:Destroy()
-    end
+if hl then  
+    hl:Destroy()  
+end
+
 end
 
 -- =========================
 -- CREATE HIGHLIGHT
 -- =========================
 local function createHighlight(
-    char,
-    color
+char,
+color
 )
 
-    if not ESP_CONFIG.Highlight then
-        return
-    end
+if not ESP_CONFIG.Highlight then  
+    return  
+end  
 
-    local hl =
-        char:FindFirstChild("KuoHL")
+local hl =  
+    char:FindFirstChild("KuoHL")  
 
-    if not hl then
+if not hl then  
 
-        hl = Instance.new("Highlight")
+    hl = Instance.new("Highlight")  
 
-        hl.Name = "KuoHL"
+    hl.Name = "KuoHL"  
 
-        hl.DepthMode =
-            Enum.HighlightDepthMode.AlwaysOnTop
+    hl.DepthMode =  
+        Enum.HighlightDepthMode.AlwaysOnTop  
 
-        hl.Parent = char
-    end
+    hl.Parent = char  
+end  
 
-    hl.FillTransparency =
-        ESP_CONFIG.FillTransparency
+hl.FillTransparency =  
+    ESP_CONFIG.FillTransparency  
 
-    hl.OutlineTransparency =
-        ESP_CONFIG.OutlineTransparency
+hl.OutlineTransparency =  
+    ESP_CONFIG.OutlineTransparency  
 
-    hl.FillColor = color
-    hl.OutlineColor = color
+hl.FillColor = color  
+hl.OutlineColor = color
+
 end
 
 -- =========================
@@ -356,25 +363,26 @@ end
 -- =========================
 local function removeESP(plr)
 
-    local cache =
-        ESPCache[plr]
+local cache =  
+    ESPCache[plr]  
 
-    if cache then
+if cache then  
 
-        hideDrawings(cache)
+    hideDrawings(cache)  
 
-        for _,obj in pairs(cache) do
-            pcall(function()
-                obj:Remove()
-            end)
-        end
-    end
+    for _,obj in pairs(cache) do  
+        pcall(function()  
+            obj:Remove()  
+        end)  
+    end  
+end  
 
-    ESPCache[plr] = nil
+ESPCache[plr] = nil  
 
-    if plr.Character then
-        removeHighlight(plr.Character)
-    end
+if plr.Character then  
+    removeHighlight(plr.Character)  
+end
+
 end
 
 -- =========================
@@ -382,157 +390,158 @@ end
 -- =========================
 local function updateESP(plr)
 
-    if plr == player then
-        return
-    end
+if plr == player then  
+    return  
+end  
 
-    local char =
-        plr.Character
+local char =  
+    plr.Character  
 
-    if not char then
-        removeESP(plr)
-        return
-    end
+if not char then  
+    removeESP(plr)  
+    return  
+end  
 
-    local root =
-        char:FindFirstChild(
-            "HumanoidRootPart"
-        )
+local root =  
+    char:FindFirstChild(  
+        "HumanoidRootPart"  
+    )  
 
-    local humanoid =
-        char:FindFirstChild(
-            "Humanoid"
-        )
+local humanoid =  
+    char:FindFirstChild(  
+        "Humanoid"  
+    )  
 
-    if not root
-    or not humanoid
-    or humanoid.Health <= 0 then
+if not root  
+or not humanoid  
+or humanoid.Health <= 0 then  
 
-        removeESP(plr)
-        return
-    end
+    removeESP(plr)  
+    return  
+end  
 
-    -- 🔥 ESP OFF = ลบทุกอย่าง
-    if not ESP_ENABLED then
+-- 🔥 ESP OFF = ลบทุกอย่าง  
+if not ESP_ENABLED then  
 
-        local cache =
-            ESPCache[plr]
+    local cache =  
+        ESPCache[plr]  
 
-        if cache then
-            hideDrawings(cache)
-        end
+    if cache then  
+        hideDrawings(cache)  
+    end  
 
-        removeHighlight(char)
+    removeHighlight(char)  
 
-        return
-    end
+    return  
+end  
 
-    local pos,visible =
-        Camera:WorldToViewportPoint(
-            root.Position
-        )
+local pos,visible =  
+    Camera:WorldToViewportPoint(  
+        root.Position  
+    )  
 
-    local cache =
-        createDrawings(plr)
+local cache =  
+    createDrawings(plr)  
 
-    if not visible then
+if not visible then  
 
-        hideDrawings(cache)
+    hideDrawings(cache)  
 
-        removeHighlight(char)
+    removeHighlight(char)  
 
-        return
-    end
+    return  
+end  
 
-    local role =
-        getRole(plr)
+local role =  
+    getRole(plr)  
 
-    local color =
-        ROLE_COLORS[role]
+local color =  
+    ROLE_COLORS[role]  
 
-    local distance =
-        (root.Position
-        - Camera.CFrame.Position).Magnitude
+local distance =  
+    (root.Position  
+    - Camera.CFrame.Position).Magnitude  
 
-    -- 🔥 PLAYER COLOR
-    createHighlight(char, color)
+-- 🔥 PLAYER COLOR  
+createHighlight(char, color)  
 
-    -- =========================
-    -- NAME
-    -- =========================
-    cache.Name.Visible =
-        ESP_CONFIG.ShowNames
+-- =========================  
+-- NAME  
+-- =========================  
+cache.Name.Visible =  
+    ESP_CONFIG.ShowNames  
 
-    cache.Name.Text =
-        "["..role.."] "..plr.Name
+cache.Name.Text =  
+    "["..role.."] "..plr.Name  
 
-    cache.Name.Position =
-        Vector2.new(
-            pos.X,
-            pos.Y - 35
-        )
+cache.Name.Position =  
+    Vector2.new(  
+        pos.X,  
+        pos.Y - 35  
+    )  
 
-    cache.Name.Color =
-        color
+cache.Name.Color =  
+    color  
 
-    -- =========================
-    -- DISTANCE
-    -- =========================
-    cache.Distance.Visible =
-        ESP_CONFIG.ShowDistance
+-- =========================  
+-- DISTANCE  
+-- =========================  
+cache.Distance.Visible =  
+    ESP_CONFIG.ShowDistance  
 
-    cache.Distance.Text =
-        math.floor(distance)
-        .."m"
+cache.Distance.Text =  
+    math.floor(distance)  
+    .."m"  
 
-    cache.Distance.Position =
-        Vector2.new(
-            pos.X,
-            pos.Y + 18
-        )
+cache.Distance.Position =  
+    Vector2.new(  
+        pos.X,  
+        pos.Y + 18  
+    )  
 
-    cache.Distance.Color =
-        color
+cache.Distance.Color =  
+    color  
 
-    -- =========================
-    -- HEALTH
-    -- =========================
-    cache.Health.Visible =
-        ESP_CONFIG.ShowHealth
+-- =========================  
+-- HEALTH  
+-- =========================  
+cache.Health.Visible =  
+    ESP_CONFIG.ShowHealth  
 
-    cache.Health.Text =
-        math.floor(humanoid.Health)
-        .." HP"
+cache.Health.Text =  
+    math.floor(humanoid.Health)  
+    .." HP"  
 
-    cache.Health.Position =
-        Vector2.new(
-            pos.X,
-            pos.Y + 34
-        )
+cache.Health.Position =  
+    Vector2.new(  
+        pos.X,  
+        pos.Y + 34  
+    )  
 
-    cache.Health.Color =
-        Color3.fromRGB(0,255,0)
+cache.Health.Color =  
+    Color3.fromRGB(0,255,0)  
 
-    -- =========================
-    -- TRACER
-    -- =========================
-    cache.Tracer.Visible =
-        ESP_CONFIG.ShowTracer
+-- =========================  
+-- TRACER  
+-- =========================  
+cache.Tracer.Visible =  
+    ESP_CONFIG.ShowTracer  
 
-    cache.Tracer.From =
-        Vector2.new(
-            Camera.ViewportSize.X / 2,
-            Camera.ViewportSize.Y
-        )
+cache.Tracer.From =  
+    Vector2.new(  
+        Camera.ViewportSize.X / 2,  
+        Camera.ViewportSize.Y  
+    )  
 
-    cache.Tracer.To =
-        Vector2.new(
-            pos.X,
-            pos.Y
-        )
+cache.Tracer.To =  
+    Vector2.new(  
+        pos.X,  
+        pos.Y  
+    )  
 
-    cache.Tracer.Color =
-        color
+cache.Tracer.Color =  
+    color
+
 end
 
 -- =========================
@@ -540,178 +549,182 @@ end
 -- =========================
 local function setupPlayer(plr)
 
-    if plr == player then
-        return
-    end
+if plr == player then  
+    return  
+end  
 
-    updateRole(plr)
+updateRole(plr)  
 
-    -- CHARACTER ADDED
-    table.insert(
-        getgenv().KuoESPConnections,
+-- CHARACTER ADDED  
+table.insert(  
+    getgenv().KuoESPConnections,  
 
-        plr.CharacterAdded:Connect(
-            function(char)
+    plr.CharacterAdded:Connect(  
+        function(char)  
 
-                task.wait(0.2)
+            task.wait(0.2)  
 
-                updateRole(plr)
+            updateRole(plr)  
 
-                char.ChildAdded:Connect(
-                    function(obj)
+            char.ChildAdded:Connect(  
+                function(obj)  
 
-                        if obj:IsA("Tool") then
-                            updateRole(plr)
-                        end
-                    end
-                )
+                    if obj:IsA("Tool") then  
+                        updateRole(plr)  
+                    end  
+                end  
+            )  
 
-                char.ChildRemoved:Connect(
-                    function(obj)
+            char.ChildRemoved:Connect(  
+                function(obj)  
 
-                        if obj:IsA("Tool") then
-                            updateRole(plr)
-                        end
-                    end
-                )
+                    if obj:IsA("Tool") then  
+                        updateRole(plr)  
+                    end  
+                end  
+            )  
 
-                if ESP_ENABLED then
-                    updateESP(plr)
-                end
-            end
-        )
-    )
+            if ESP_ENABLED then  
+                updateESP(plr)  
+            end  
+        end  
+    )  
+)  
 
-    -- CHARACTER REMOVING
-    table.insert(
-        getgenv().KuoESPConnections,
+-- CHARACTER REMOVING  
+table.insert(  
+    getgenv().KuoESPConnections,  
 
-        plr.CharacterRemoving:Connect(
-            function()
-                removeESP(plr)
-            end
-        )
-    )
+    plr.CharacterRemoving:Connect(  
+        function()  
+            removeESP(plr)  
+        end  
+    )  
+)  
 
-    -- BACKPACK
-    local bp =
-        plr:WaitForChild("Backpack")
+-- BACKPACK  
+local bp =  
+    plr:WaitForChild("Backpack")  
 
-    table.insert(
-        getgenv().KuoESPConnections,
+table.insert(  
+    getgenv().KuoESPConnections,  
 
-        bp.ChildAdded:Connect(
-            function(obj)
+    bp.ChildAdded:Connect(  
+        function(obj)  
 
-                if obj:IsA("Tool") then
-                    updateRole(plr)
-                end
-            end
-        )
-    )
+            if obj:IsA("Tool") then  
+                updateRole(plr)  
+            end  
+        end  
+    )  
+)  
 
-    table.insert(
-        getgenv().KuoESPConnections,
+table.insert(  
+    getgenv().KuoESPConnections,  
 
-        bp.ChildRemoved:Connect(
-            function(obj)
+    bp.ChildRemoved:Connect(  
+        function(obj)  
 
-                if obj:IsA("Tool") then
-                    updateRole(plr)
-                end
-            end
-        )
-    )
+            if obj:IsA("Tool") then  
+                updateRole(plr)  
+            end  
+        end  
+    )  
+)
+
 end
 
 -- =========================
 -- INIT PLAYERS
 -- =========================
 for _,plr in ipairs(
-    Players:GetPlayers()
+Players:GetPlayers()
 ) do
-    setupPlayer(plr)
+setupPlayer(plr)
 end
 
 -- PLAYER ADDED
 table.insert(
-    getgenv().KuoESPConnections,
+getgenv().KuoESPConnections,
 
-    Players.PlayerAdded:Connect(
-        setupPlayer
-    )
+Players.PlayerAdded:Connect(  
+    setupPlayer  
+)
+
 )
 
 -- PLAYER REMOVED
 table.insert(
-    getgenv().KuoESPConnections,
+getgenv().KuoESPConnections,
 
-    Players.PlayerRemoving:Connect(
-        removeESP
-    )
+Players.PlayerRemoving:Connect(  
+    removeESP  
+)
+
 )
 
 -- =========================
 -- MAIN LOOP
 -- =========================
 table.insert(
-    getgenv().KuoESPConnections,
+getgenv().KuoESPConnections,
 
-    RunService.RenderStepped:Connect(
-        function()
+RunService.RenderStepped:Connect(  
+    function()  
 
-            for _,plr in ipairs(
-                Players:GetPlayers()
-            ) do
+        for _,plr in ipairs(  
+            Players:GetPlayers()  
+        ) do  
 
-                pcall(function()
+            pcall(function()  
 
-                    updateRole(plr)
-                    updateESP(plr)
+                updateRole(plr)  
+                updateESP(plr)  
 
-                end)
-            end
-        end
-    )
+            end)  
+        end  
+    end  
+)
+
 )
 -- =========================
 -- 🔫 GUN ESP
 -- =========================
 
-
 local GunHL = nil
 
 local function removeGunESP()
-    if GunHL then
-        GunHL:Destroy()
-        GunHL = nil
-    end
+if GunHL then
+GunHL:Destroy()
+GunHL = nil
+end
 end
 
 local function createGunESP(gun)
 
-    removeGunESP()
+removeGunESP()  
 
-    local part =
-        gun:IsA("BasePart") and gun
-        or gun:FindFirstChildWhichIsA("BasePart", true)
+local part =  
+    gun:IsA("BasePart") and gun  
+    or gun:FindFirstChildWhichIsA("BasePart", true)  
 
-    if not part then
-        return
-    end
+if not part then  
+    return  
+end  
 
-    GunHL = Instance.new("Highlight")
-    GunHL.Name = "KuoGunESP"
+GunHL = Instance.new("Highlight")  
+GunHL.Name = "KuoGunESP"  
 
-    GunHL.FillColor = Color3.fromRGB(0,170,255)
-    GunHL.OutlineColor = Color3.fromRGB(255,255,255)
+GunHL.FillColor = Color3.fromRGB(0,170,255)  
+GunHL.OutlineColor = Color3.fromRGB(255,255,255)  
 
-    GunHL.FillTransparency = 0.2
-    GunHL.OutlineTransparency = 0
+GunHL.FillTransparency = 0.2  
+GunHL.OutlineTransparency = 0  
 
-    GunHL.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    GunHL.Adornee = gun
-    GunHL.Parent = game.CoreGui
+GunHL.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop  
+GunHL.Adornee = gun  
+GunHL.Parent = game.CoreGui
+
 end
 
 -- =========================
@@ -719,23 +732,24 @@ end
 -- =========================
 task.spawn(function()
 
-    while task.wait(0.2) do
+while task.wait(0.2) do  
 
-        if not GunESP then
-            removeGunESP()
-            continue
-        end
+    if not GunESP then  
+        removeGunESP()  
+        continue  
+    end  
 
-        local gun =
-            workspace:FindFirstChild("GunDrop", true)
-            or workspace:FindFirstChild("Gun", true)
+    local gun =  
+        workspace:FindFirstChild("GunDrop", true)  
+        or workspace:FindFirstChild("Gun", true)  
 
-        if gun then
-            createGunESP(gun)
-        else
-            removeGunESP()
-        end
-    end
+    if gun then  
+        createGunESP(gun)  
+    else  
+        removeGunESP()  
+    end  
+end
+
 end)
 
 -- =========================
@@ -796,48 +810,48 @@ local char = player.Character
 local hrp = char and char:FindFirstChild("HumanoidRootPart")
 if not hrp then continue end
 
-local gun = workspace:FindFirstChild("GunDrop", true)        
-    or workspace:FindFirstChild("Gun", true)        
+local gun = workspace:FindFirstChild("GunDrop", true)
+or workspace:FindFirstChild("Gun", true)
 
-if not isDroppedGun(gun) then        
-    gotGunThisRound = false        
-    continue        
-end        
+if not isDroppedGun(gun) then
+gotGunThisRound = false
+continue
+end
 
-if gotGunThisRound then continue end        
+if gotGunThisRound then continue end
 
-local targetPart = gun:IsA("BasePart") and gun        
-    or gun:FindFirstChildWhichIsA("BasePart", true)        
+local targetPart = gun:IsA("BasePart") and gun
+or gun:FindFirstChildWhichIsA("BasePart", true)
 
-if not targetPart then continue end        
+if not targetPart then continue end
 
--- 🧠 เช็คความปลอดภัย        
-if not isSafeToWarp(targetPart) then        
-    continue -- ❌ ไม่วาร์ป        
-end        
+-- 🧠 เช็คความปลอดภัย
+if not isSafeToWarp(targetPart) then
+continue -- ❌ ไม่วาร์ป
+end
 
-gotGunThisRound = true        
+gotGunThisRound = true
 
-local oldPos = hrp.CFrame        
+local oldPos = hrp.CFrame
 
--- 👻 ปิด Invisible        
-wasInvisibleBeforeWarp = invisible        
-if wasInvisibleBeforeWarp then        
-    applyInvisible(false)        
-    task.wait(0.05)        
-end        
+-- 👻 ปิด Invisible
+wasInvisibleBeforeWarp = invisible
+if wasInvisibleBeforeWarp then
+applyInvisible(false)
+task.wait(0.05)
+end
 
--- 🚀 วาร์ป        
-hrp.CFrame = targetPart.CFrame        
-task.wait(0.15)        
+-- 🚀 วาร์ป
+hrp.CFrame = targetPart.CFrame
+task.wait(0.15)
 
--- 🔙 กลับ        
-hrp.CFrame = oldPos        
+-- 🔙 กลับ
+hrp.CFrame = oldPos
 
--- 👻 เปิดกลับ        
-if wasInvisibleBeforeWarp then        
-    task.wait(0.05)        
-    applyInvisible(true)        
+-- 👻 เปิดกลับ
+if wasInvisibleBeforeWarp then
+task.wait(0.05)
+applyInvisible(true)
 end
 
 end
@@ -937,27 +951,27 @@ if not AUTO_SHOOT then continue end
 local target = findMurderer()
 if not target or not target.Character then continue end
 
--- 🔥 ถือปืนอัตโนมัติ        
-equipGun()        
+-- 🔥 ถือปืนอัตโนมัติ
+equipGun()
 
-local char = player.Character        
-local gun = char and char:FindFirstChild("Gun")        
+local char = player.Character
+local gun = char and char:FindFirstChild("Gun")
 
--- ❗ ยังไม่ถือ = ไม่ยิง        
-if not gun then continue end        
+-- ❗ ยังไม่ถือ = ไม่ยิง
+if not gun then continue end
 
-local shootEvent = gun:FindFirstChild("Shoot")        
-local originPart = gun:FindFirstChild("Handle")        
+local shootEvent = gun:FindFirstChild("Shoot")
+local originPart = gun:FindFirstChild("Handle")
 
-if not shootEvent or not originPart then continue end        
+if not shootEvent or not originPart then continue end
 
-local originCF = originPart.CFrame        
-local targetCF = getLeadCFrame(target.Character, originPart.Position)        
+local originCF = originPart.CFrame
+local targetCF = getLeadCFrame(target.Character, originPart.Position)
 
-if targetCF then        
-    pcall(function()        
-        shootEvent:FireServer(originCF, targetCF)        
-    end)        
+if targetCF then
+pcall(function()
+shootEvent:FireServer(originCF, targetCF)
+end)
 end
 
 end
@@ -1175,13 +1189,13 @@ if not AUTO_KNIFE then continue end
 local target = getNearestEnemy()
 if not target or not target.Character then continue end
 
-local root = target.Character:FindFirstChild("HumanoidRootPart")        
-if not root then continue end        
+local root = target.Character:FindFirstChild("HumanoidRootPart")
+if not root then continue end
 
-equipKnife()        
+equipKnife()
 
-local knife = getKnife()        
-if not knife then continue end -- ✅ กันยิงตอนยังไม่ถือ        
+local knife = getKnife()
+if not knife then continue end -- ✅ กันยิงตอนยังไม่ถือ
 
 throwKnife(root)
 
@@ -1199,10 +1213,10 @@ if not KILL_AURA then continue end
 local target = getNearestEnemy()
 if not target then continue end
 
-equipKnife()        
+equipKnife()
 
-local knife = getKnife()        
-if not knife then continue end -- ✅ ต้องถือก่อน        
+local knife = getKnife()
+if not knife then continue end -- ✅ ต้องถือก่อน
 
 attack(target)
 
@@ -1548,17 +1562,18 @@ local LocalPlayer = Players.LocalPlayer
 -- =========================
 local AIMBOT_CONFIG = {
 
-    -- ⚡ Predict ยิงไกล
-    Prediction = 0.07,
+-- ⚡ Predict ยิงไกล  
+Prediction = 0.07,  
 
-    -- 🌍 ชดเชยแรงโน้มถ่วง
-    GravityCompensation = 0.012,
+-- 🌍 ชดเชยแรงโน้มถ่วง  
+GravityCompensation = 0.012,  
 
-    -- 🎲 Randomization
-    Randomness = 0.008,
+-- 🎲 Randomization  
+Randomness = 0.008,  
 
-    -- ⚡ ความเร็วลูป
-    ShootDelay = 0.003,
+-- ⚡ ความเร็วลูป  
+ShootDelay = 0.003,
+
 }
 
 -- =========================
@@ -1566,13 +1581,14 @@ local AIMBOT_CONFIG = {
 -- =========================
 local function getGun()
 
-    local char = LocalPlayer.Character
+local char = LocalPlayer.Character  
 
-    if not char then
-        return nil
-    end
+if not char then  
+    return nil  
+end  
 
-    return char:FindFirstChild("Gun")
+return char:FindFirstChild("Gun")
+
 end
 
 -- =========================
@@ -1582,29 +1598,30 @@ local lastGunEquip = 0
 
 local function equipGun()
 
-    if tick() - lastGunEquip < 0.25 then
-        return
-    end
+if tick() - lastGunEquip < 0.25 then  
+    return  
+end  
 
-    lastGunEquip = tick()
+lastGunEquip = tick()  
 
-    local char = LocalPlayer.Character
-    local backpack =
-        LocalPlayer:FindFirstChild("Backpack")
+local char = LocalPlayer.Character  
+local backpack =  
+    LocalPlayer:FindFirstChild("Backpack")  
 
-    if not char or not backpack then
-        return
-    end
+if not char or not backpack then  
+    return  
+end  
 
-    if not char:FindFirstChild("Gun") then
+if not char:FindFirstChild("Gun") then  
 
-        local gun =
-            backpack:FindFirstChild("Gun")
+    local gun =  
+        backpack:FindFirstChild("Gun")  
 
-        if gun then
-            gun.Parent = char
-        end
-    end
+    if gun then  
+        gun.Parent = char  
+    end  
+end
+
 end
 
 -- =========================
@@ -1612,23 +1629,24 @@ end
 -- =========================
 local function isMurderer(model)
 
-    local plr =
-        Players:GetPlayerFromCharacter(model)
+local plr =  
+    Players:GetPlayerFromCharacter(model)  
 
-    if not plr then
-        return false
-    end
+if not plr then  
+    return false  
+end  
 
-    local bp = plr:FindFirstChild("Backpack")
-    local char = plr.Character
+local bp = plr:FindFirstChild("Backpack")  
+local char = plr.Character  
 
-    if (bp and bp:FindFirstChild("Knife")) or
-       (char and char:FindFirstChild("Knife")) then
+if (bp and bp:FindFirstChild("Knife")) or  
+   (char and char:FindFirstChild("Knife")) then  
 
-        return true
-    end
+    return true  
+end  
 
-    return false
+return false
+
 end
 
 -- =========================
@@ -1636,85 +1654,87 @@ end
 -- =========================
 local function getSmartPart(targetChar)
 
-    local hrp =
-        targetChar:FindFirstChild(
-            "HumanoidRootPart"
-        )
+local hrp =  
+    targetChar:FindFirstChild(  
+        "HumanoidRootPart"  
+    )  
 
-    if hrp then
-        return hrp
-    end
+if hrp then  
+    return hrp  
+end  
 
-    return targetChar:FindFirstChild("Head")
+return targetChar:FindFirstChild("Head")
+
 end
 
 -- =========================
 -- ULTRA PREDICTION
 -- =========================
 local function getUltraPrediction(
-    targetChar,
-    originPos
+targetChar,
+originPos
 )
 
-    local targetPart =
-        getSmartPart(targetChar)
+local targetPart =  
+    getSmartPart(targetChar)  
 
-    local root =
-        targetChar:FindFirstChild(
-            "HumanoidRootPart"
-        )
+local root =  
+    targetChar:FindFirstChild(  
+        "HumanoidRootPart"  
+    )  
 
-    if not targetPart or not root then
-        return nil
-    end
+if not targetPart or not root then  
+    return nil  
+end  
 
-    local velocity =
-        root.AssemblyLinearVelocity
+local velocity =  
+    root.AssemblyLinearVelocity  
 
-    local distance =
-        (targetPart.Position
-        - originPos).Magnitude
+local distance =  
+    (targetPart.Position  
+    - originPos).Magnitude  
 
-    -- ⚡ Predict
-    local travelTime =
-        distance
-        * AIMBOT_CONFIG.Prediction
-        / 100
+-- ⚡ Predict  
+local travelTime =  
+    distance  
+    * AIMBOT_CONFIG.Prediction  
+    / 100  
 
-    local predictedPos =
-        targetPart.Position
-        + (velocity * travelTime)
+local predictedPos =  
+    targetPart.Position  
+    + (velocity * travelTime)  
 
-    -- 🌍 Gravity Compensation
-    predictedPos =
-        predictedPos
-        + Vector3.new(
-            0,
-            distance
-            * AIMBOT_CONFIG.GravityCompensation,
-            0
-        )
+-- 🌍 Gravity Compensation  
+predictedPos =  
+    predictedPos  
+    + Vector3.new(  
+        0,  
+        distance  
+        * AIMBOT_CONFIG.GravityCompensation,  
+        0  
+    )  
 
-    -- 🎲 Randomization
-    predictedPos =
-        predictedPos
-        + Vector3.new(
-            math.random(-100,100)
-            * AIMBOT_CONFIG.Randomness,
+-- 🎲 Randomization  
+predictedPos =  
+    predictedPos  
+    + Vector3.new(  
+        math.random(-100,100)  
+        * AIMBOT_CONFIG.Randomness,  
 
-            math.random(-100,100)
-            * AIMBOT_CONFIG.Randomness,
+        math.random(-100,100)  
+        * AIMBOT_CONFIG.Randomness,  
 
-            math.random(-100,100)
-            * AIMBOT_CONFIG.Randomness
-        )
+        math.random(-100,100)  
+        * AIMBOT_CONFIG.Randomness  
+    )  
 
-    -- 🔥 ยิงกลางตัว
-    predictedPos =
-        predictedPos
-        + Vector3.new(0, -0.2, 0)
+-- 🔥 ยิงกลางตัว  
+predictedPos =  
+    predictedPos  
+    + Vector3.new(0, -0.2, 0)  
 
-    return CFrame.new(predictedPos)
+return CFrame.new(predictedPos)
+
 end
 
 -- =========================
@@ -1722,36 +1742,37 @@ end
 -- =========================
 local function getWallOrigin(targetChar)
 
-    local char = LocalPlayer.Character
+local char = LocalPlayer.Character  
 
-    if not char then
-        return nil
-    end
+if not char then  
+    return nil  
+end  
 
-    local root =
-        char:FindFirstChild(
-            "HumanoidRootPart"
-        )
+local root =  
+    char:FindFirstChild(  
+        "HumanoidRootPart"  
+    )  
 
-    local targetRoot =
-        targetChar:FindFirstChild(
-            "HumanoidRootPart"
-        )
+local targetRoot =  
+    targetChar:FindFirstChild(  
+        "HumanoidRootPart"  
+    )  
 
-    if not root or not targetRoot then
-        return nil
-    end
+if not root or not targetRoot then  
+    return nil  
+end  
 
-    local direction =
-        (targetRoot.Position
-        - root.Position).Unit
+local direction =  
+    (targetRoot.Position  
+    - root.Position).Unit  
 
-    -- 🔥 จุดยิงทะลุกำแพง
-    local pos =
-        targetRoot.Position
-        - (direction * 3)
+-- 🔥 จุดยิงทะลุกำแพง  
+local pos =  
+    targetRoot.Position  
+    - (direction * 3)  
 
-    return CFrame.new(pos)
+return CFrame.new(pos)
+
 end
 
 -- =========================
@@ -1759,70 +1780,71 @@ end
 -- =========================
 local function fireWall()
 
-    equipGun()
+equipGun()  
 
-    local gun = getGun()
+local gun = getGun()  
 
-    if not gun then
-        return
-    end
+if not gun then  
+    return  
+end  
 
-    local shootEvent =
-        gun:FindFirstChild("Shoot")
+local shootEvent =  
+    gun:FindFirstChild("Shoot")  
 
-    if not shootEvent then
-        return
-    end
+if not shootEvent then  
+    return  
+end  
 
-    -- 🔥 หา Murderer
-    for _,plr in ipairs(
-        Players:GetPlayers()
-    ) do
+-- 🔥 หา Murderer  
+for _,plr in ipairs(  
+    Players:GetPlayers()  
+) do  
 
-        if plr ~= LocalPlayer
-        and plr.Character then
+    if plr ~= LocalPlayer  
+    and plr.Character then  
 
-            local char = plr.Character
+        local char = plr.Character  
 
-            local humanoid =
-                char:FindFirstChild(
-                    "Humanoid"
-                )
+        local humanoid =  
+            char:FindFirstChild(  
+                "Humanoid"  
+            )  
 
-            if humanoid
-            and humanoid.Health > 0
-            and isMurderer(char) then
+        if humanoid  
+        and humanoid.Health > 0  
+        and isMurderer(char) then  
 
-                -- 🔥 จุดยิงทะลุกำแพง
-                local originCF =
-                    getWallOrigin(char)
+            -- 🔥 จุดยิงทะลุกำแพง  
+            local originCF =  
+                getWallOrigin(char)  
 
-                if not originCF then
-                    continue
-                end
+            if not originCF then  
+                continue  
+            end  
 
-                local targetCF =
-                    getUltraPrediction(
-                        char,
-                        originCF.Position
-                    )
+            local targetCF =  
+                getUltraPrediction(  
+                    char,  
+                    originCF.Position  
+                )  
 
-                if targetCF then
+            if targetCF then  
 
-                    pcall(function()
+                pcall(function()  
 
-                        shootEvent:FireServer(
-                            originCF,
-                            targetCF
-                        )
+                    shootEvent:FireServer(  
+                        originCF,  
+                        targetCF  
+                    )  
 
-                    end)
+                end)  
 
-                    break
-                end
-            end
-        end
-    end
+                break  
+            end  
+        end  
+    end  
+end
+
 end
 
 -- =========================
@@ -1830,19 +1852,20 @@ end
 -- =========================
 task.spawn(function()
 
-    while task.wait(
-        AIMBOT_CONFIG.ShootDelay
-    ) do
+while task.wait(  
+    AIMBOT_CONFIG.ShootDelay  
+) do  
 
-        if not Shot_AURA then
-            continue
-        end
+    if not Shot_AURA then  
+        continue  
+    end  
 
-        pcall(function()
-            fireWall()
-        end)
+    pcall(function()  
+        fireWall()  
+    end)  
 
-    end
+end
+
 end)
 
 -- =========================
@@ -1855,7 +1878,7 @@ Logo = "rbxassetid://126460540157931",
 Invite = "https://discord.gg/Apn2j9Fez",
 })
 Home:Toggle({Title="ESP",Desc="ไฮไลต์ผู้เล่น",Callback=function(v) ESP_ENABLED=v end})
-Home:Toggle({Title ="Gun ESP",Desc ="ไฮไลต์ปืนตก",Callback =function(v) GunESP =v end})                        
+Home:Toggle({Title ="Gun ESP",Desc ="ไฮไลต์ปืนตก",Callback =function(v) GunESP =v end})
 Home:Toggle({Title="Fly",Desc="บิน",Callback=function(v) setFly(v) end})
 Home:Toggle({Title="Auto Warp Gun",Desc="วาร์ปเก็บปืน",Callback=function(v) AUTO_WARP_GUN=v end})
 Home:Toggle({Title="Infinite Jump",Desc="กระโดดไม่จำกัด",Callback=function(v) INFINITE_JUMP=v end})
@@ -1903,11 +1926,11 @@ end
 })
 
 Combat:Toggle({
-    Title = "Shoot through the wall",
-    Desc = "ยิงทะลุกำแพง",
-    Callback = function(v)
-        Shot_AURA = v
-    end
+Title = "Shoot through the wall",
+Desc = "ยิงทะลุกำแพง",
+Callback = function(v)
+Shot_AURA = v
+end
 })
 
 Combat:Toggle({
@@ -2008,4 +2031,216 @@ UIS.InputBegan:Connect(function(i,g)
 if not g and i.KeyCode == Enum.KeyCode.F then
 setFly(not flying)
 end
+end)
+-- =========================
+-- WARNING GUI
+-- =========================
+local TweenService =
+game:GetService("TweenService")
+
+local CoreGui =
+game:GetService("CoreGui")
+
+pcall(function()
+CoreGui:FindFirstChild("Kuo Hub"):Destroy()
+end)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "Kuo Hub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+-- =========================
+-- MAIN
+-- =========================
+local Main = Instance.new("Frame")
+Main.Parent = ScreenGui
+Main.AnchorPoint = Vector2.new(0.5,0)
+Main.Position = UDim2.new(0.5,0,-0.3,0)
+Main.Size = UDim2.new(0,420,0,145)
+Main.BackgroundColor3 =
+Color3.fromRGB(15,15,15)
+Main.BorderSizePixel = 0
+
+Instance.new("UICorner", Main).CornerRadius =
+UDim.new(0,20)
+
+-- Stroke
+local Stroke = Instance.new("UIStroke")
+Stroke.Parent = Main
+Stroke.Thickness = 2
+Stroke.Color = Color3.fromRGB(255,170,0)
+
+-- Glow
+local Glow = Instance.new("ImageLabel")
+Glow.Parent = Main
+Glow.BackgroundTransparency = 1
+Glow.Size = UDim2.new(1,50,1,50)
+Glow.Position = UDim2.new(0,-25,0,-25)
+Glow.Image = "rbxassetid://5028857084"
+Glow.ImageTransparency = 0.35
+Glow.ScaleType = Enum.ScaleType.Slice
+Glow.SliceCenter = Rect.new(24,24,276,276)
+Glow.ImageColor3 =
+Color3.fromRGB(255,170,0)
+
+-- =========================
+-- ICON
+-- =========================
+local Icon = Instance.new("TextLabel")
+Icon.Parent = Main
+Icon.BackgroundTransparency = 1
+Icon.Position = UDim2.new(0,14,0,8)
+Icon.Size = UDim2.new(0,40,0,40)
+Icon.Font = Enum.Font.GothamBold
+Icon.Text = "⚠️"
+Icon.TextSize = 28
+
+-- =========================
+-- TITLE
+-- =========================
+local Title = Instance.new("TextLabel")
+Title.Parent = Main
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0,55,0,10)
+Title.Size = UDim2.new(1,-65,0,30)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "DELTA DETECT WARNING"
+Title.TextSize = 24
+Title.TextColor3 =
+Color3.fromRGB(255,255,255)
+Title.TextXAlignment =
+Enum.TextXAlignment.Left
+
+-- =========================
+-- MESSAGE
+-- =========================
+local Desc = Instance.new("TextLabel")
+Desc.Parent = Main
+Desc.BackgroundTransparency = 1
+Desc.Position = UDim2.new(0,18,0,48)
+Desc.Size = UDim2.new(1,-36,0,70)
+Desc.Font = Enum.Font.Gotham
+Desc.TextWrapped = true
+Desc.TextYAlignment =
+Enum.TextYAlignment.Top
+Desc.TextXAlignment =
+Enum.TextXAlignment.Left
+Desc.TextSize = 15
+
+Desc.Text =
+"⚠️ ตัวรัน Delta โดน Detect (โดนตรวจจับ)\n\n" ..
+"ตอนนี้มีหลายคนโดนเตือนหรือโดนแบน\n" ..
+"ใครยังไม่โดน แนะนำให้งดใช้ตัวรันหลัก\n" ..
+"หรือใช้ในไอดีสำรองไปก่อน"
+
+Desc.TextColor3 =
+Color3.fromRGB(220,220,220)
+
+-- =========================
+-- BAR
+-- =========================
+local BarBG = Instance.new("Frame")
+BarBG.Parent = Main
+BarBG.Position = UDim2.new(0,18,1,-16)
+BarBG.Size = UDim2.new(1,-36,0,6)
+BarBG.BackgroundColor3 =
+Color3.fromRGB(35,35,35)
+BarBG.BorderSizePixel = 0
+
+Instance.new("UICorner", BarBG).CornerRadius =
+UDim.new(1,0)
+
+local Bar = Instance.new("Frame")
+Bar.Parent = BarBG
+Bar.Size = UDim2.new(0,0,1,0)
+Bar.BackgroundColor3 =
+Color3.fromRGB(255,170,0)
+Bar.BorderSizePixel = 0
+
+Instance.new("UICorner", Bar).CornerRadius =
+UDim.new(1,0)
+
+-- =========================
+-- ANIMATION
+-- =========================
+
+TweenService:Create(
+Main,
+TweenInfo.new(
+0.45,
+Enum.EasingStyle.Quint,
+Enum.EasingDirection.Out
+),
+{
+Position = UDim2.new(0.5,0,0.04,0)
+}
+):Play()
+
+TweenService:Create(
+Bar,
+TweenInfo.new(7),
+{
+Size = UDim2.new(1,0,1,0)
+}
+):Play()
+
+-- Glow Pulse
+task.spawn(function()
+
+while Main.Parent do  
+
+    TweenService:Create(  
+        Glow,  
+        TweenInfo.new(  
+            1,  
+            Enum.EasingStyle.Sine,  
+            Enum.EasingDirection.InOut  
+        ),  
+        {  
+            ImageTransparency = 0.55  
+        }  
+    ):Play()  
+
+    task.wait(1)  
+
+    TweenService:Create(  
+        Glow,  
+        TweenInfo.new(  
+            1,  
+            Enum.EasingStyle.Sine,  
+            Enum.EasingDirection.InOut  
+        ),  
+        {  
+            ImageTransparency = 0.3  
+        }  
+    ):Play()  
+
+    task.wait(1)  
+end
+
+end)
+
+-- =========================
+-- REMOVE
+-- =========================
+task.delay(7.2,function()
+
+TweenService:Create(  
+    Main,  
+    TweenInfo.new(  
+        0.4,  
+        Enum.EasingStyle.Quint,  
+        Enum.EasingDirection.In  
+    ),  
+    {  
+        Position = UDim2.new(0.5,0,-0.3,0),  
+        BackgroundTransparency = 1  
+    }  
+):Play()  
+
+task.wait(0.45)  
+
+ScreenGui:Destroy()
+
 end)
