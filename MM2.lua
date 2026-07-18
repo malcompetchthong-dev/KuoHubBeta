@@ -1,2066 +1,2219 @@
-local Window = loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/ITKuo/refs/heads/main/KUOHUBUI.lua"))()
-
-Window:MakeWindow({
-Title = "Kuo Hub[Beta-MM2]",
-})
-
-Window:AddMinimizeButton({
-Button = { Image = "rbxassetid://126460540157931", BackgroundTransparency = 0 },
-Corner = { CornerRadius = UDim.new(35, 1) },
-})
-
-local Home = Window:Tab("Home")
-
-local Combat = Window:MakeTab({"Combat","sword"})
-
-local Info = Window:MakeTab({"System", "history"})
-
-Home:Section("Main")
-
-repeat task.wait() until game:IsLoaded()
-
---// SERVICES
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-
-local player = Players.LocalPlayer
-
---// CHARACTER
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local root = character:WaitForChild("HumanoidRootPart")
-
---// SETTINGS
-local flying = false
-local speed = 60
-local ESP_ENABLED = false
-local AUTO_WARP_GUN = false
-local INFINITE_JUMP = false
-local AIMLOCK = false
-local LOCK_TARGET = nil
-local NOCLIP = false
-local AUTO_SHOOT = false
-local AUTO_KNIFE = false
-local KILL_AURA = false
-local KNIFE_RANGE = 1000
-local KILL_AURA_RANGE = 2000
-local MAX_DISTANCE = 1000
-local AUTO_COIN_COLLECT = false
-local CHAT_ANNOUNCE = false
-local Anti_Pling = false
-local AUTO_PUSH = false
-local AUTO_LEECH_MURDER = false
-local LOOP_DELAY = 0.1
-local lastKnifeEquip = 0
-local lastGunEquip = 0
-local gotGunThisRound = false
-local wasInvisibleBeforeWarp = false
-local SAFE_DISTANCE_GUN = 2
-local GunESP = false
-local Shot_AURA = false
-
--- =========================
--- FLY
--- =========================
-local bv = Instance.new("BodyVelocity")
-bv.MaxForce = Vector3.new(9e9,9e9,9e9)
-
-local bg = Instance.new("BodyGyro")
-bg.MaxTorque = Vector3.new(9e9,9e9,9e9)
-
-local function setFly(state)
-flying = state
-bv.Parent = state and root or nil
-bg.Parent = state and root or nil
-end
-
-RunService.RenderStepped:Connect(function()
-if flying then
-local cam = workspace.CurrentCamera
-local moveDir = humanoid.MoveDirection
-bv.Velocity = (cam.CFrame.LookVector * moveDir.Z + cam.CFrame.RightVector * moveDir.X) * speed
-bg.CFrame = cam.CFrame
-end
-end)
-
--- =========================
--- CLEAN OLD CONNECTION
--- =========================
-getgenv().KuoESPConnections =
-getgenv().KuoESPConnections or {}
-
-for _,c in pairs(
-getgenv().KuoESPConnections
-) do
-pcall(function()
-c:Disconnect()
-end)
-end
-
-table.clear(getgenv().KuoESPConnections)
-
--- =========================
--- SERVICES
--- =========================
-local Players =
-game:GetService("Players")
-
-local RunService =
-game:GetService("RunService")
-
-local Camera =
-workspace.CurrentCamera
-
-local player =
-Players.LocalPlayer
-
-ESP_ENABLED =
-ESP_ENABLED or false
-
--- =========================
--- SETTINGS
--- =========================
-local ESP_CONFIG = {
-
-MaxDistance = math.huge,  
-
-ShowNames = true,  
-ShowDistance = true,  
-ShowTracer = true,  
-ShowHealth = true,  
-
--- 🔥 PLAYER COLOR  
-Highlight = true,  
-
-FillTransparency = 0.55,  
-OutlineTransparency = 0,
-
-}
-
--- =========================
--- ROLE COLORS
--- =========================
-local ROLE_COLORS = {
-
-Murderer =  
-    Color3.fromRGB(255,0,0),  
-
-Sheriff =  
-    Color3.fromRGB(0,170,255),  
-
-Innocent =  
-    Color3.fromRGB(0,255,120),
-
-}
-
--- =========================
--- ROLE CACHE
--- =========================
-local RoleCache = {}
-
--- =========================
--- UPDATE ROLE
--- =========================
-local function updateRole(plr)
-
-local role = "Innocent"  
-
-local char =  
-    plr.Character  
-
-local bp =  
-    plr:FindFirstChild("Backpack")  
-
-local function checkContainer(container)  
-
-    if not container then  
-        return nil  
-    end  
-
-    for _,tool in ipairs(  
-        container:GetChildren()  
-    ) do  
-
-        if tool:IsA("Tool") then  
-
-            local name =  
-                string.lower(tool.Name)  
-
-            if name == "knife"  
-            or name:find("knife") then  
-
-                return "Murderer"  
-            end  
-
-            if name == "gun"  
-            or name:find("gun")  
-            or name:find("revolver") then  
-
-                return "Sheriff"  
-            end  
-        end  
-    end  
-end  
-
-local charRole =  
-    checkContainer(char)  
-
-if charRole then  
-
-    role = charRole  
-
-else  
-
-    local bpRole =  
-        checkContainer(bp)  
-
-    if bpRole then  
-        role = bpRole  
-    end  
-end  
-
-RoleCache[plr] = role
-
-end
-
--- =========================
--- GET ROLE
--- =========================
-local function getRole(plr)
-
-return RoleCache[plr]  
-    or "Innocent"
-
-end
-
--- =========================
--- ESP CACHE
--- =========================
-local ESPCache = {}
-
--- =========================
--- CREATE DRAWINGS
--- =========================
-local function createDrawings(plr)
-
-if ESPCache[plr] then  
-    return ESPCache[plr]  
-end  
-
-local cache = {}  
-
--- 🏷️ NAME  
-cache.Name =  
-    Drawing.new("Text")  
-
-cache.Name.Center = true  
-cache.Name.Size = 16  
-cache.Name.Outline = true  
-cache.Name.Font = 2  
-
--- 📏 DISTANCE  
-cache.Distance =  
-    Drawing.new("Text")  
-
-cache.Distance.Center = true  
-cache.Distance.Size = 13  
-cache.Distance.Outline = true  
-cache.Distance.Font = 2  
-
--- ❤️ HEALTH  
-cache.Health =  
-    Drawing.new("Text")  
-
-cache.Health.Center = true  
-cache.Health.Size = 13  
-cache.Health.Outline = true  
-cache.Health.Font = 2  
-
--- 👀 TRACER  
-cache.Tracer =  
-    Drawing.new("Line")  
-
-cache.Tracer.Thickness = 1.2  
-
-ESPCache[plr] = cache  
-
-return cache
-
-end
-
--- =========================
--- HIDE DRAWINGS
--- =========================
-local function hideDrawings(cache)
-
-if not cache then  
-    return  
-end  
-
-for _,v in pairs(cache) do  
-    v.Visible = false  
-end
-
-end
-
--- =========================
--- REMOVE HIGHLIGHT
--- =========================
-local function removeHighlight(char)
-
-if not char then  
-    return  
-end  
-
-local hl =  
-    char:FindFirstChild("KuoHL")  
-
-if hl then  
-    hl:Destroy()  
-end
-
-end
-
--- =========================
--- CREATE HIGHLIGHT
--- =========================
-local function createHighlight(
-char,
-color
-)
-
-if not ESP_CONFIG.Highlight then  
-    return  
-end  
-
-local hl =  
-    char:FindFirstChild("KuoHL")  
-
-if not hl then  
-
-    hl = Instance.new("Highlight")  
-
-    hl.Name = "KuoHL"  
-
-    hl.DepthMode =  
-        Enum.HighlightDepthMode.AlwaysOnTop  
-
-    hl.Parent = char  
-end  
-
-hl.FillTransparency =  
-    ESP_CONFIG.FillTransparency  
-
-hl.OutlineTransparency =  
-    ESP_CONFIG.OutlineTransparency  
-
-hl.FillColor = color  
-hl.OutlineColor = color
-
-end
-
--- =========================
--- REMOVE ESP
--- =========================
-local function removeESP(plr)
-
-local cache =  
-    ESPCache[plr]  
-
-if cache then  
-
-    hideDrawings(cache)  
-
-    for _,obj in pairs(cache) do  
-        pcall(function()  
-            obj:Remove()  
-        end)  
-    end  
-end  
-
-ESPCache[plr] = nil  
-
-if plr.Character then  
-    removeHighlight(plr.Character)  
-end
-
-end
-
--- =========================
--- UPDATE ESP
--- =========================
-local function updateESP(plr)
-
-if plr == player then  
-    return  
-end  
-
-local char =  
-    plr.Character  
-
-if not char then  
-    removeESP(plr)  
-    return  
-end  
-
-local root =  
-    char:FindFirstChild(  
-        "HumanoidRootPart"  
-    )  
-
-local humanoid =  
-    char:FindFirstChild(  
-        "Humanoid"  
-    )  
-
-if not root  
-or not humanoid  
-or humanoid.Health <= 0 then  
-
-    removeESP(plr)  
-    return  
-end  
-
--- 🔥 ESP OFF = ลบทุกอย่าง  
-if not ESP_ENABLED then  
-
-    local cache =  
-        ESPCache[plr]  
-
-    if cache then  
-        hideDrawings(cache)  
-    end  
-
-    removeHighlight(char)  
-
-    return  
-end  
-
-local pos,visible =  
-    Camera:WorldToViewportPoint(  
-        root.Position  
-    )  
-
-local cache =  
-    createDrawings(plr)  
-
-if not visible then  
-
-    hideDrawings(cache)  
-
-    removeHighlight(char)  
-
-    return  
-end  
-
-local role =  
-    getRole(plr)  
-
-local color =  
-    ROLE_COLORS[role]  
-
-local distance =  
-    (root.Position  
-    - Camera.CFrame.Position).Magnitude  
-
--- 🔥 PLAYER COLOR  
-createHighlight(char, color)  
-
+local Window = loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/ITKuo/refs/heads/main/KUOHUBUI.lua"))()  
+  
+Window:MakeWindow({  
+Title = "Kuo Hub | MM2",  
+})  
+  
+Window:AddMinimizeButton({  
+Button = { Image = "rbxassetid://126460540157931", BackgroundTransparency = 0 },  
+Corner = { CornerRadius = UDim.new(35, 1) },  
+})  
+  
+local Home = Window:Tab("Home")  
+  
+local Combat = Window:MakeTab({"Combat","sword"})  
+
+local Info = Window:MakeTab({"System","history"})
+  
+Home:Section("Main")  
+  
+repeat task.wait() until game:IsLoaded()  
+  
+--// SERVICES  
+local Players = game:GetService("Players")  
+local UIS = game:GetService("UserInputService")  
+local RunService = game:GetService("RunService")  
+  
+local player = Players.LocalPlayer  
+  
+--// CHARACTER  
+local character = player.Character or player.CharacterAdded:Wait()  
+local humanoid = character:WaitForChild("Humanoid")  
+local root = character:WaitForChild("HumanoidRootPart")  
+  
+--// SETTINGS  
+local flying = false  
+local speed = 60  
+local ESP_ENABLED = false  
+local AUTO_WARP_GUN = false  
+local INFINITE_JUMP = false  
+local AIMLOCK = false  
+local LOCK_TARGET = nil  
+local NOCLIP = false  
+local AUTO_SHOOT = false  
+local AUTO_KNIFE = false  
+local KILL_AURA = false    
+local MAX_DISTANCE = 1000  
+local AUTO_COIN_COLLECT = false  
+local CHAT_ANNOUNCE = false  
+local Anti_Pling = false  
+local AUTO_PUSH = false  
+local AUTO_LEECH_MURDER = false  
+local LOOP_DELAY = 0.1  
+local lastKnifeEquip = 0  
+local lastGunEquip = 0  
+local gotGunThisRound = false  
+local wasInvisibleBeforeWarp = false  
+local SAFE_DISTANCE_GUN = 2  
+local GunESP = false  
+local Shot_AURA = false  
+  
 -- =========================  
--- NAME  
+-- FLY  
 -- =========================  
-cache.Name.Visible =  
-    ESP_CONFIG.ShowNames  
-
-cache.Name.Text =  
-    "["..role.."] "..plr.Name  
-
-cache.Name.Position =  
-    Vector2.new(  
-        pos.X,  
-        pos.Y - 35  
-    )  
-
-cache.Name.Color =  
+local bv = Instance.new("BodyVelocity")  
+bv.MaxForce = Vector3.new(9e9,9e9,9e9)  
+  
+local bg = Instance.new("BodyGyro")  
+bg.MaxTorque = Vector3.new(9e9,9e9,9e9)  
+  
+local function setFly(state)  
+flying = state  
+bv.Parent = state and root or nil  
+bg.Parent = state and root or nil  
+end  
+  
+RunService.RenderStepped:Connect(function()  
+if flying then  
+local cam = workspace.CurrentCamera  
+local moveDir = humanoid.MoveDirection  
+bv.Velocity = (cam.CFrame.LookVector * moveDir.Z + cam.CFrame.RightVector * moveDir.X) * speed  
+bg.CFrame = cam.CFrame  
+end  
+end)  
+  
+-- =========================  
+-- CLEAN OLD CONNECTION  
+-- =========================  
+getgenv().KuoESPConnections =  
+getgenv().KuoESPConnections or {}  
+  
+for _,c in pairs(  
+getgenv().KuoESPConnections  
+) do  
+pcall(function()  
+c:Disconnect()  
+end)  
+end  
+  
+table.clear(getgenv().KuoESPConnections)  
+  
+-- =========================  
+-- SERVICES  
+-- =========================  
+local Players =  
+game:GetService("Players")  
+  
+local RunService =  
+game:GetService("RunService")  
+  
+local Camera =  
+workspace.CurrentCamera  
+  
+local player =  
+Players.LocalPlayer  
+  
+ESP_ENABLED =  
+ESP_ENABLED or false  
+  
+-- =========================  
+-- SETTINGS  
+-- =========================  
+local ESP_CONFIG = {  
+  
+MaxDistance = math.huge,    
+  
+ShowNames = true,    
+ShowDistance = true,    
+ShowTracer = true,    
+ShowHealth = true,    
+  
+-- 🔥 PLAYER COLOR    
+Highlight = true,    
+  
+FillTransparency = 0.55,    
+OutlineTransparency = 0,  
+  
+}  
+  
+-- =========================  
+-- ROLE COLORS  
+-- =========================  
+local ROLE_COLORS = {  
+  
+Murderer =    
+    Color3.fromRGB(255,0,0),    
+  
+Sheriff =    
+    Color3.fromRGB(0,170,255),    
+  
+Innocent =    
+    Color3.fromRGB(0,255,120),  
+  
+}  
+  
+-- =========================  
+-- ROLE CACHE  
+-- =========================  
+local RoleCache = {}  
+  
+-- =========================  
+-- UPDATE ROLE  
+-- =========================  
+local function updateRole(plr)  
+  
+local role = "Innocent"    
+  
+local char =    
+    plr.Character    
+  
+local bp =    
+    plr:FindFirstChild("Backpack")    
+  
+local function checkContainer(container)    
+  
+    if not container then    
+        return nil    
+    end    
+  
+    for _,tool in ipairs(    
+        container:GetChildren()    
+    ) do    
+  
+        if tool:IsA("Tool") then    
+  
+            local name =    
+                string.lower(tool.Name)    
+  
+            if name == "knife"    
+            or name:find("knife") then    
+  
+                return "Murderer"    
+            end    
+  
+            if name == "gun"    
+            or name:find("gun")    
+            or name:find("revolver") then    
+  
+                return "Sheriff"    
+            end    
+        end    
+    end    
+end    
+  
+local charRole =    
+    checkContainer(char)    
+  
+if charRole then    
+  
+    role = charRole    
+  
+else    
+  
+    local bpRole =    
+        checkContainer(bp)    
+  
+    if bpRole then    
+        role = bpRole    
+    end    
+end    
+  
+RoleCache[plr] = role  
+  
+end  
+  
+-- =========================  
+-- GET ROLE  
+-- =========================  
+local function getRole(plr)  
+  
+return RoleCache[plr]    
+    or "Innocent"  
+  
+end  
+  
+-- =========================  
+-- ESP CACHE  
+-- =========================  
+local ESPCache = {}  
+  
+-- =========================  
+-- CREATE DRAWINGS  
+-- =========================  
+local function createDrawings(plr)  
+  
+if ESPCache[plr] then    
+    return ESPCache[plr]    
+end    
+  
+local cache = {}    
+  
+-- 🏷️ NAME    
+cache.Name =    
+    Drawing.new("Text")    
+  
+cache.Name.Center = true    
+cache.Name.Size = 16    
+cache.Name.Outline = true    
+cache.Name.Font = 2    
+  
+-- 📏 DISTANCE    
+cache.Distance =    
+    Drawing.new("Text")    
+  
+cache.Distance.Center = true    
+cache.Distance.Size = 13    
+cache.Distance.Outline = true    
+cache.Distance.Font = 2    
+  
+-- ❤️ HEALTH    
+cache.Health =    
+    Drawing.new("Text")    
+  
+cache.Health.Center = true    
+cache.Health.Size = 13    
+cache.Health.Outline = true    
+cache.Health.Font = 2    
+  
+-- 👀 TRACER    
+cache.Tracer =    
+    Drawing.new("Line")    
+  
+cache.Tracer.Thickness = 1.2    
+  
+ESPCache[plr] = cache    
+  
+return cache  
+  
+end  
+  
+-- =========================  
+-- HIDE DRAWINGS  
+-- =========================  
+local function hideDrawings(cache)  
+  
+if not cache then    
+    return    
+end    
+  
+for _,v in pairs(cache) do    
+    v.Visible = false    
+end  
+  
+end  
+  
+-- =========================  
+-- REMOVE HIGHLIGHT  
+-- =========================  
+local function removeHighlight(char)  
+  
+if not char then    
+    return    
+end    
+  
+local hl =    
+    char:FindFirstChild("KuoHL")    
+  
+if hl then    
+    hl:Destroy()    
+end  
+  
+end  
+  
+-- =========================  
+-- CREATE HIGHLIGHT  
+-- =========================  
+local function createHighlight(  
+char,  
+color  
+)  
+  
+if not ESP_CONFIG.Highlight then    
+    return    
+end    
+  
+local hl =    
+    char:FindFirstChild("KuoHL")    
+  
+if not hl then    
+  
+    hl = Instance.new("Highlight")    
+  
+    hl.Name = "KuoHL"    
+  
+    hl.DepthMode =    
+        Enum.HighlightDepthMode.AlwaysOnTop    
+  
+    hl.Parent = char    
+end    
+  
+hl.FillTransparency =    
+    ESP_CONFIG.FillTransparency    
+  
+hl.OutlineTransparency =    
+    ESP_CONFIG.OutlineTransparency    
+  
+hl.FillColor = color    
+hl.OutlineColor = color  
+  
+end  
+  
+-- =========================  
+-- REMOVE ESP  
+-- =========================  
+local function removeESP(plr)  
+  
+local cache =    
+    ESPCache[plr]    
+  
+if cache then    
+  
+    hideDrawings(cache)    
+  
+    for _,obj in pairs(cache) do    
+        pcall(function()    
+            obj:Remove()    
+        end)    
+    end    
+end    
+  
+ESPCache[plr] = nil    
+  
+if plr.Character then    
+    removeHighlight(plr.Character)    
+end  
+  
+end  
+  
+-- =========================  
+-- UPDATE ESP  
+-- =========================  
+local function updateESP(plr)  
+  
+if plr == player then    
+    return    
+end    
+  
+local char =    
+    plr.Character    
+  
+if not char then    
+    removeESP(plr)    
+    return    
+end    
+  
+local root =    
+    char:FindFirstChild(    
+        "HumanoidRootPart"    
+    )    
+  
+local humanoid =    
+    char:FindFirstChild(    
+        "Humanoid"    
+    )    
+  
+if not root    
+or not humanoid    
+or humanoid.Health <= 0 then    
+  
+    removeESP(plr)    
+    return    
+end    
+  
+-- 🔥 ESP OFF = ลบทุกอย่าง    
+if not ESP_ENABLED then    
+  
+    local cache =    
+        ESPCache[plr]    
+  
+    if cache then    
+        hideDrawings(cache)    
+    end    
+  
+    removeHighlight(char)    
+  
+    return    
+end    
+  
+local pos,visible =    
+    Camera:WorldToViewportPoint(    
+        root.Position    
+    )    
+  
+local cache =    
+    createDrawings(plr)    
+  
+if not visible then    
+  
+    hideDrawings(cache)    
+  
+    removeHighlight(char)    
+  
+    return    
+end    
+  
+local role =    
+    getRole(plr)    
+  
+local color =    
+    ROLE_COLORS[role]    
+  
+local distance =    
+    (root.Position    
+    - Camera.CFrame.Position).Magnitude    
+  
+-- 🔥 PLAYER COLOR    
+createHighlight(char, color)    
+  
+-- =========================    
+-- NAME    
+-- =========================    
+cache.Name.Visible =    
+    ESP_CONFIG.ShowNames    
+  
+cache.Name.Text =    
+    "["..role.."] "..plr.Name    
+  
+cache.Name.Position =    
+    Vector2.new(    
+        pos.X,    
+        pos.Y - 35    
+    )    
+  
+cache.Name.Color =    
+    color    
+  
+-- =========================    
+-- DISTANCE    
+-- =========================    
+cache.Distance.Visible =    
+    ESP_CONFIG.ShowDistance    
+  
+cache.Distance.Text =    
+    math.floor(distance)    
+    .."m"    
+  
+cache.Distance.Position =    
+    Vector2.new(    
+        pos.X,    
+        pos.Y + 18    
+    )    
+  
+cache.Distance.Color =    
+    color    
+  
+-- =========================    
+-- HEALTH    
+-- =========================    
+cache.Health.Visible =    
+    ESP_CONFIG.ShowHealth    
+  
+cache.Health.Text =    
+    math.floor(humanoid.Health)    
+    .." HP"    
+  
+cache.Health.Position =    
+    Vector2.new(    
+        pos.X,    
+        pos.Y + 34    
+    )    
+  
+cache.Health.Color =    
+    Color3.fromRGB(0,255,0)    
+  
+-- =========================    
+-- TRACER    
+-- =========================    
+cache.Tracer.Visible =    
+    ESP_CONFIG.ShowTracer    
+  
+cache.Tracer.From =    
+    Vector2.new(    
+        Camera.ViewportSize.X / 2,    
+        Camera.ViewportSize.Y    
+    )    
+  
+cache.Tracer.To =    
+    Vector2.new(    
+        pos.X,    
+        pos.Y    
+    )    
+  
+cache.Tracer.Color =    
     color  
-
--- =========================  
--- DISTANCE  
--- =========================  
-cache.Distance.Visible =  
-    ESP_CONFIG.ShowDistance  
-
-cache.Distance.Text =  
-    math.floor(distance)  
-    .."m"  
-
-cache.Distance.Position =  
-    Vector2.new(  
-        pos.X,  
-        pos.Y + 18  
-    )  
-
-cache.Distance.Color =  
-    color  
-
--- =========================  
--- HEALTH  
--- =========================  
-cache.Health.Visible =  
-    ESP_CONFIG.ShowHealth  
-
-cache.Health.Text =  
-    math.floor(humanoid.Health)  
-    .." HP"  
-
-cache.Health.Position =  
-    Vector2.new(  
-        pos.X,  
-        pos.Y + 34  
-    )  
-
-cache.Health.Color =  
-    Color3.fromRGB(0,255,0)  
-
--- =========================  
--- TRACER  
--- =========================  
-cache.Tracer.Visible =  
-    ESP_CONFIG.ShowTracer  
-
-cache.Tracer.From =  
-    Vector2.new(  
-        Camera.ViewportSize.X / 2,  
-        Camera.ViewportSize.Y  
-    )  
-
-cache.Tracer.To =  
-    Vector2.new(  
-        pos.X,  
-        pos.Y  
-    )  
-
-cache.Tracer.Color =  
-    color
-
-end
-
--- =========================
--- PLAYER SETUP
--- =========================
-local function setupPlayer(plr)
-
-if plr == player then  
-    return  
+  
 end  
-
-updateRole(plr)  
-
--- CHARACTER ADDED  
-table.insert(  
-    getgenv().KuoESPConnections,  
-
-    plr.CharacterAdded:Connect(  
-        function(char)  
-
-            task.wait(0.2)  
-
-            updateRole(plr)  
-
-            char.ChildAdded:Connect(  
-                function(obj)  
-
-                    if obj:IsA("Tool") then  
-                        updateRole(plr)  
-                    end  
-                end  
-            )  
-
-            char.ChildRemoved:Connect(  
-                function(obj)  
-
-                    if obj:IsA("Tool") then  
-                        updateRole(plr)  
-                    end  
-                end  
-            )  
-
-            if ESP_ENABLED then  
-                updateESP(plr)  
-            end  
-        end  
-    )  
+  
+-- =========================  
+-- PLAYER SETUP  
+-- =========================  
+local function setupPlayer(plr)  
+  
+if plr == player then    
+    return    
+end    
+  
+updateRole(plr)    
+  
+-- CHARACTER ADDED    
+table.insert(    
+    getgenv().KuoESPConnections,    
+  
+    plr.CharacterAdded:Connect(    
+        function(char)    
+  
+            task.wait(0.2)    
+  
+            updateRole(plr)    
+  
+            char.ChildAdded:Connect(    
+                function(obj)    
+  
+                    if obj:IsA("Tool") then    
+                        updateRole(plr)    
+                    end    
+                end    
+            )    
+  
+            char.ChildRemoved:Connect(    
+                function(obj)    
+  
+                    if obj:IsA("Tool") then    
+                        updateRole(plr)    
+                    end    
+                end    
+            )    
+  
+            if ESP_ENABLED then    
+                updateESP(plr)    
+            end    
+        end    
+    )    
+)    
+  
+-- CHARACTER REMOVING    
+table.insert(    
+    getgenv().KuoESPConnections,    
+  
+    plr.CharacterRemoving:Connect(    
+        function()    
+            removeESP(plr)    
+        end    
+    )    
+)    
+  
+-- BACKPACK    
+local bp =    
+    plr:WaitForChild("Backpack")    
+  
+table.insert(    
+    getgenv().KuoESPConnections,    
+  
+    bp.ChildAdded:Connect(    
+        function(obj)    
+  
+            if obj:IsA("Tool") then    
+                updateRole(plr)    
+            end    
+        end    
+    )    
+)    
+  
+table.insert(    
+    getgenv().KuoESPConnections,    
+  
+    bp.ChildRemoved:Connect(    
+        function(obj)    
+  
+            if obj:IsA("Tool") then    
+                updateRole(plr)    
+            end    
+        end    
+    )    
 )  
-
--- CHARACTER REMOVING  
-table.insert(  
-    getgenv().KuoESPConnections,  
-
-    plr.CharacterRemoving:Connect(  
-        function()  
-            removeESP(plr)  
-        end  
-    )  
-)  
-
--- BACKPACK  
-local bp =  
-    plr:WaitForChild("Backpack")  
-
-table.insert(  
-    getgenv().KuoESPConnections,  
-
-    bp.ChildAdded:Connect(  
-        function(obj)  
-
-            if obj:IsA("Tool") then  
-                updateRole(plr)  
-            end  
-        end  
-    )  
-)  
-
-table.insert(  
-    getgenv().KuoESPConnections,  
-
-    bp.ChildRemoved:Connect(  
-        function(obj)  
-
-            if obj:IsA("Tool") then  
-                updateRole(plr)  
-            end  
-        end  
-    )  
-)
-
-end
-
--- =========================
--- INIT PLAYERS
--- =========================
-for _,plr in ipairs(
-Players:GetPlayers()
-) do
-setupPlayer(plr)
-end
-
--- PLAYER ADDED
-table.insert(
-getgenv().KuoESPConnections,
-
-Players.PlayerAdded:Connect(  
-    setupPlayer  
-)
-
-)
-
--- PLAYER REMOVED
-table.insert(
-getgenv().KuoESPConnections,
-
-Players.PlayerRemoving:Connect(  
-    removeESP  
-)
-
-)
-
--- =========================
--- MAIN LOOP
--- =========================
-table.insert(
-getgenv().KuoESPConnections,
-
-RunService.RenderStepped:Connect(  
-    function()  
-
-        for _,plr in ipairs(  
-            Players:GetPlayers()  
-        ) do  
-
-            pcall(function()  
-
-                updateRole(plr)  
-                updateESP(plr)  
-
-            end)  
-        end  
-    end  
-)
-
-)
--- =========================
--- 🔫 GUN ESP
--- =========================
-
-local GunHL = nil
-
-local function removeGunESP()
-if GunHL then
-GunHL:Destroy()
-GunHL = nil
-end
-end
-
-local function createGunESP(gun)
-
-removeGunESP()  
-
-local part =  
-    gun:IsA("BasePart") and gun  
-    or gun:FindFirstChildWhichIsA("BasePart", true)  
-
-if not part then  
-    return  
+  
 end  
-
-GunHL = Instance.new("Highlight")  
-GunHL.Name = "KuoGunESP"  
-
-GunHL.FillColor = Color3.fromRGB(0,170,255)  
-GunHL.OutlineColor = Color3.fromRGB(255,255,255)  
-
-GunHL.FillTransparency = 0.2  
-GunHL.OutlineTransparency = 0  
-
-GunHL.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop  
-GunHL.Adornee = gun  
-GunHL.Parent = game.CoreGui
-
-end
-
--- =========================
--- 🔁 LOOP
--- =========================
-task.spawn(function()
-
-while task.wait(0.2) do  
-
-    if not GunESP then  
-        removeGunESP()  
-        continue  
-    end  
-
-    local gun =  
-        workspace:FindFirstChild("GunDrop", true)  
-        or workspace:FindFirstChild("Gun", true)  
-
-    if gun then  
-        createGunESP(gun)  
-    else  
-        removeGunESP()  
-    end  
-end
-
-end)
-
--- =========================
--- 🚀 AUTO WARP GUN
--- =========================
-
--- 🔍 หา Murderer
-local function getMurderer()
-for _, plr in ipairs(game.Players:GetPlayers()) do
-if plr ~= game.Players.LocalPlayer and plr.Character then
-if getRole(plr) == "Murderer" then
-return plr
-end
-end
-end
-end
-
--- 🔍 เช็คปืนร่วงจริง
-local function isDroppedGun(gun)
-if not gun then return false end
-
-local parent = gun.Parent
-if not parent then return false end
-
-if parent:FindFirstChild("Humanoid") then return false end
-if parent:IsA("Backpack") then return false end
-
-return gun:IsDescendantOf(workspace)
-
-end
-
--- 🧠 เช็คว่าปลอดภัยไหม
-local function isSafeToWarp(gunPart)
-local murderer = getMurderer()
-if not murderer or not murderer.Character then return true end
-
-local mRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
-if not mRoot then return true end
-
-local dist = (mRoot.Position - gunPart.Position).Magnitude
-
--- ❌ ใกล้เกิน = อันตราย
-if dist < SAFE_DISTANCE_GUN then
-return false
-end
-
-return true
-
-end
-
--- 🔁 LOOP
-task.spawn(function()
-while task.wait(0.2) do
-if not AUTO_WARP_GUN then continue end
-
-local player = game.Players.LocalPlayer
-local char = player.Character
-local hrp = char and char:FindFirstChild("HumanoidRootPart")
-if not hrp then continue end
-
-local gun = workspace:FindFirstChild("GunDrop", true)
-or workspace:FindFirstChild("Gun", true)
-
-if not isDroppedGun(gun) then
-gotGunThisRound = false
-continue
-end
-
-if gotGunThisRound then continue end
-
-local targetPart = gun:IsA("BasePart") and gun
-or gun:FindFirstChildWhichIsA("BasePart", true)
-
-if not targetPart then continue end
-
--- 🧠 เช็คความปลอดภัย
-if not isSafeToWarp(targetPart) then
-continue -- ❌ ไม่วาร์ป
-end
-
-gotGunThisRound = true
-
-local oldPos = hrp.CFrame
-
--- 👻 ปิด Invisible
-wasInvisibleBeforeWarp = invisible
-if wasInvisibleBeforeWarp then
-applyInvisible(false)
-task.wait(0.05)
-end
-
--- 🚀 วาร์ป
-hrp.CFrame = targetPart.CFrame
-task.wait(0.15)
-
--- 🔙 กลับ
-hrp.CFrame = oldPos
-
--- 👻 เปิดกลับ
-if wasInvisibleBeforeWarp then
-task.wait(0.05)
-applyInvisible(true)
-end
-
-end
-
-end)
-
--- =========================
--- 🔫 AUTO GUN SYSTEM (FULL + 50/50 AIM)
--- =========================
-
--- 🔍 หา Murderer
-local function findMurderer()
-for _, plr in ipairs(Players:GetPlayers()) do
-if plr ~= player and plr.Character and getRole(plr) == "Murderer" then
-return plr
-end
-end
-end
-
--- =========================
--- 🎲 RANDOM PART (50% HEAD / 50% BODY)
--- =========================
-local function getRandomPart50(targetChar)
-local head = targetChar:FindFirstChild("Head")
-
--- 50% ยิงหัว
-if head and math.random() < 0.5 then
-return head
-end
-
--- 50% ยิงส่วนอื่น
-local parts = {}
-for _, v in ipairs(targetChar:GetDescendants()) do
-if v:IsA("BasePart") and v.Name ~= "Head" then
-table.insert(parts, v)
-end
-end
-
-if #parts > 0 then
-return parts[math.random(1, #parts)]
-end
-
-return head
-
-end
-
--- =========================
--- 🎯 PREDICT AIM (50/50)
--- =========================
-local function getLeadCFrame(targetChar, originPos)
-local part = getRandomPart50(targetChar)
-local root = targetChar:FindFirstChild("HumanoidRootPart")
-if not part or not root then return end
-
-local velocity = root.AssemblyLinearVelocity
-
-local distance = (part.Position - originPos).Magnitude
-local predictTime = math.clamp(distance / 200, 0.15, 0.35)
-
-local predictedPos = part.Position + (velocity * predictTime)
-
--- ชดเชยแกน Y
-predictedPos = predictedPos + Vector3.new(0, math.clamp(velocity.Y * 0.1, -2, 2), 0)
-
-return CFrame.new(predictedPos)
-
-end
-
--- =========================
--- 🔫 AUTO EQUIP GUN
--- =========================
-local lastGunEquip = 0
-
-local function equipGun()
-if tick() - lastGunEquip < 0.3 then return end
-lastGunEquip = tick()
-
-local char = player.Character
-local backpack = player:FindFirstChild("Backpack")
-
-if not char or not backpack then return end
-
-local gun = backpack:FindFirstChild("Gun")
-if gun then
-gun.Parent = char
-end
-
-end
-
--- =========================
--- 🔫 AUTO SHOOT LOOP
--- =========================
-task.spawn(function()
-while task.wait(0.01) do
-if not AUTO_SHOOT then continue end
-
-local target = findMurderer()
-if not target or not target.Character then continue end
-
--- 🔥 ถือปืนอัตโนมัติ
-equipGun()
-
-local char = player.Character
-local gun = char and char:FindFirstChild("Gun")
-
--- ❗ ยังไม่ถือ = ไม่ยิง
-if not gun then continue end
-
-local shootEvent = gun:FindFirstChild("Shoot")
-local originPart = gun:FindFirstChild("Handle")
-
-if not shootEvent or not originPart then continue end
-
-local originCF = originPart.CFrame
-local targetCF = getLeadCFrame(target.Character, originPart.Position)
-
-if targetCF then
-pcall(function()
-shootEvent:FireServer(originCF, targetCF)
-end)
-end
-
-end
-
-end)
-
--- =========================
--- INFINITE JUMP
--- =========================
-UIS.JumpRequest:Connect(function()
-if INFINITE_JUMP then
-local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-end
-end)
-
--- =========================
--- NOCLIP
--- =========================
-RunService.Stepped:Connect(function()
-if NOCLIP then
-local char = player.Character
-if char then
-for _, v in ipairs(char:GetDescendants()) do
-if v:IsA("BasePart") then v.CanCollide = false end
-end
-end
-end
-end)
-
--- =========================
--- AIMLOCK
--- =========================
-local function getMurdererRoot()
-for _, plr in ipairs(Players:GetPlayers()) do
-if plr ~= player and plr.Character and getRole(plr) == "Murderer" then
-return plr.Character:FindFirstChild("HumanoidRootPart")
-end
-end
-end
-
-RunService.RenderStepped:Connect(function()
-if AIMLOCK then
-if not LOCK_TARGET or not LOCK_TARGET.Parent then
-LOCK_TARGET = getMurdererRoot()
-end
-local cam = workspace.CurrentCamera
-if LOCK_TARGET then
-cam.CFrame = CFrame.new(cam.CFrame.Position, LOCK_TARGET.Position)
-end
-end
-end)
-
--- =========================
--- 🔪 AUTO KNIFE + AUTO EQUIP (FINAL FIX)
--- =========================
-
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer -- 🔥 แก้จาก LocalPlayers
-
--- =========================
--- 📦 GET CHARACTER
--- =========================
-local function getChar()
-return player.Character or player.CharacterAdded:Wait()
-end
-
-local function getHRP()
-local char = getChar()
-return char and char:FindFirstChild("HumanoidRootPart")
-end
-
--- =========================
--- 🔥 AUTO EQUIP KNIFE
--- =========================
-local function equipKnife()
-if tick() - lastKnifeEquip < 0.3 then return end
-lastKnifeEquip = tick()
-
-local char = getChar()
-local backpack = player:FindFirstChild("Backpack")
-
-if not char or not backpack then return end
-
-local knife = backpack:FindFirstChild("Knife")
-if knife then
-knife.Parent = char
-end
-
-end
-
-local function getKnife()
-local char = getChar()
-return char and char:FindFirstChild("Knife")
-end
-
--- =========================
--- 🔪 THROW KNIFE
--- =========================
-local function throwKnife(enemyRoot)
-local knife = getKnife()
-if not knife or not enemyRoot then return end
-
-local events = knife:FindFirstChild("Events")
-local throw = events and events:FindFirstChild("KnifeThrown")
-if not throw then return end
-
-local myRoot = getHRP()
-if not myRoot then return end
-
-local distance = (myRoot.Position - enemyRoot.Position).Magnitude
-local prediction = math.clamp(distance / 200, 0.1, 0.3)
-
-local velocity = enemyRoot.AssemblyLinearVelocity
-local predictedPos = enemyRoot.Position + (velocity * prediction)
-
-throw:FireServer(
-CFrame.new(myRoot.Position),
-CFrame.new(predictedPos)
-)
-
-end
-
--- =========================
--- 🔪 STAB KNIFE
--- =========================
-local function stabKnife(enemyRoot)
-local knife = getKnife()
-if not knife or not enemyRoot then return end
-
-local events = knife:FindFirstChild("Events")
-if not events then return end
-
-local handleTouched = events:FindFirstChild("HandleTouched")
-local stabbed = events:FindFirstChild("KnifeStabbed")
-
-if handleTouched then
-handleTouched:FireServer(enemyRoot)
-end
-
-if stabbed then
-stabbed:FireServer()
-end
-
-end
-
--- =========================
--- 🎯 FIND TARGET
--- =========================
-local function getNearestEnemy()
-local hrp = getHRP()
-if not hrp then return nil end
-
-local closest = nil
-local distMin = MAX_DISTANCE
-
-for _, plr in pairs(Players:GetPlayers()) do
-if plr ~= player and plr.Character then
-local root = plr.Character:FindFirstChild("HumanoidRootPart")
-if root then
-local dist = (hrp.Position - root.Position).Magnitude
-if dist < distMin then
-distMin = dist
-closest = plr
-end
-end
-end
-end
-
-return closest
-
-end
-
--- =========================
--- 💀 ATTACK (KILL AURA)
--- =========================
-local function attack(plr)
-equipKnife()
-
-local knife = getKnife()
-if not knife then return end -- ✅ ต้องถือก่อน
-
-local hrp = getHRP()
-if not hrp or not plr.Character then return end
-
-local enemyRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-if not enemyRoot then return end
-
-local old = hrp.CFrame
-
-hrp.CFrame = CFrame.lookAt(hrp.Position, enemyRoot.Position)
-hrp.CFrame = enemyRoot.CFrame * CFrame.new(0, 0, -2)
-
-task.wait(0.05)
-
-for i = 1, 3 do
-throwKnife(enemyRoot)
-stabKnife(enemyRoot)
-task.wait(0.03)
-end
-
-task.wait(0.05)
-
-hrp.CFrame = old
-
-end
-
--- =========================
--- 🔁 AUTO KNIFE LOOP (FIX)
--- =========================
-task.spawn(function()
-while task.wait(0.1) do
-if not AUTO_KNIFE then continue end
-
-local target = getNearestEnemy()
-if not target or not target.Character then continue end
-
-local root = target.Character:FindFirstChild("HumanoidRootPart")
-if not root then continue end
-
-equipKnife()
-
-local knife = getKnife()
-if not knife then continue end -- ✅ กันยิงตอนยังไม่ถือ
-
-throwKnife(root)
-
-end
-
-end)
-
--- =========================
--- 🔁 KILL AURA LOOP (FIX)
--- =========================
-task.spawn(function()
-while task.wait(LOOP_DELAY) do
-if not KILL_AURA then continue end
-
-local target = getNearestEnemy()
-if not target then continue end
-
-equipKnife()
-
-local knife = getKnife()
-if not knife then continue end -- ✅ ต้องถือก่อน
-
-attack(target)
-
-end
-
-end)
-
-local TweenService = game:GetService("TweenService")
-
-local COIN_SPEED = 30
-local SAFE_DISTANCE = 40
-local STUCK_TIME = 1
-
-local currentTarget = nil
-local lastMoveTime = tick()
-local lastPos = nil
-
--- 🔍 หาเหรียญแบบฉลาด (หลบคน)
-local function getSmartCoin(root)
-local bestCoin = nil
-local bestScore = math.huge
-
-for _, coin in ipairs(workspace:GetDescendants()) do
-if (coin.Name == "Coin" or coin.Name == "Coin_Server") and coin:IsA("BasePart") then
-
-local dist = (coin.Position - root.Position).Magnitude
-
--- 🧠 เช็คศัตรูใกล้เหรียญ
-local danger = 0
-for _, plr in ipairs(Players:GetPlayers()) do
-if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-local d = (plr.Character.HumanoidRootPart.Position - coin.Position).Magnitude
-if d < SAFE_DISTANCE then
-danger = danger + (SAFE_DISTANCE - d)
-end
-end
-end
-
--- 🎯 score ต่ำ = ดี
-local score = dist + (danger * 5)
-
-if score < bestScore then
-bestScore = score
-bestCoin = coin
-end
-
-end
-
-end
-
-return bestCoin
-
-end
-
--- 🚀 Tween Fly (เนียน + กันแบน)
-local function tweenTo(root, pos)
-local dist = (root.Position - pos).Magnitude
-local time = dist / COIN_SPEED
-
-local tween = TweenService:Create(
-root,
-TweenInfo.new(time, Enum.EasingStyle.Linear),
-{CFrame = CFrame.new(pos)}
-)
-
-tween:Play()
-return tween
-
-end
-
--- 🔥 LOOP
-task.spawn(function()
-while task.wait(0.01) do
-if not AUTO_COIN_COLLECT then continue end
-
-local char = player.Character
-local root = char and char:FindFirstChild("HumanoidRootPart")
-if not root then continue end
-
--- ❗ ปิด Fly ปกติ
-if flying then
-setFly(false)
-end
-
--- 🎯 ล็อคเป้าหมาย
-if not currentTarget or not currentTarget.Parent then
-currentTarget = getSmartCoin(root)
-end
-
-if not currentTarget then continue end
-
-local targetPos = currentTarget.Position + Vector3.new(0, 2, 0)
-
--- 🚀 Tween ไปหา
-local tween = tweenTo(root, targetPos)
-
--- 🧠 Anti Stuck
-local startTime = tick()
-lastPos = root.Position
-
-while tween.PlaybackState == Enum.PlaybackState.Playing do
-task.wait(0.01)
-
-if not AUTO_COIN_COLLECT then
-tween:Cancel()
-break
-end
-
--- 🧱 ติด = วาร์ป
-if (root.Position - lastPos).Magnitude < 1 then
-if tick() - startTime > STUCK_TIME then
-root.CFrame = CFrame.new(targetPos)
-break
-end
-else
-startTime = tick()
-lastPos = root.Position
-end
-
-end
-
--- 🔄 รีเซ็ตเป้าหมาย
-currentTarget = nil
-
-end
-
-end)
-
--- =========================
--- 📢 CHAT ANNOUNCE (FIXED)
--- =========================
-
-local TextChatService = game:GetService("TextChatService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
--- 🔥 ส่งแชท (โคตรเสถียร)
-local function sendChat(msg)
-pcall(function()
-if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-
-local channels = TextChatService:WaitForChild("TextChannels", 2)
-local channel = channels and channels:FindFirstChild("RBXGeneral")
-
-if channel then
-channel:SendAsync(msg)
-else
-warn("No RBXGeneral channel")
-end
-
-else
-ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents")
-:WaitForChild("SayMessageRequest")
-:FireServer(msg, "All")
-end
-
-end)
-
-end
-
--- 🔪 หา Murderer
-local function getMurderer()
-for _, plr in ipairs(Players:GetPlayers()) do
-if plr ~= player and getRole(plr) == "Murderer" then
-return plr
-end
-end
-end
-
--- 👮 หา Sheriff
-local function getSheriffPlayer()
-for _, plr in ipairs(Players:GetPlayers()) do
-if plr ~= player and getRole(plr) == "Sheriff" then
-return plr
-end
-end
-end
-
--- 🔁 Loop ประกาศ
-task.spawn(function()
-local announced = false
-
-while task.wait(0.1) do
-if not CHAT_ANNOUNCE then
-announced = false
-continue
-end
-
-if not announced then
-local murderer = getMurderer()
-local sheriff = getSheriffPlayer()
-
-if murderer and sheriff then
-local msg = "Murderer: "..murderer.Name..
-" | Sheriff: "..sheriff.Name..
-" | Kuo Hub"
-
-sendChat(msg)
-announced = true
-
-task.wait(0.01) -- ✅ ต้อง 1-2 วิ ถึงจะเสถียร
-
-end
-
-end
-
--- 🔄 รีรอบใหม่
-if not getMurderer() and not getSheriffPlayer() then
-announced = false
-end
-
-end
-
-end)
-
--- =========================
--- SYSTEM: ANTI PLING (NO COLLIDE)
--- =========================
-
-local function setCollision(character, state)
-for _, part in ipairs(character:GetDescendants()) do
-if part:IsA("BasePart") then
-part.CanCollide = state
-end
-end
-end
-
-local function applyNoCollide(player)
-if not player.Character then return end
-
-setCollision(player.Character, false)
-
-player.Character.DescendantAdded:Connect(function(part)
-if part:IsA("BasePart") then
-part.CanCollide = false
-end
-end)
-
-end
-
--- =========================
--- MAIN LOOP (TOGGLE CONTROL)
--- =========================
-task.spawn(function()
-while task.wait(0.01) do
-if Anti_Pling then
-for _, plr in ipairs(Players:GetPlayers()) do
-if plr.Character then
-applyNoCollide(plr)
-end
-end
-else
-for _, plr in ipairs(Players:GetPlayers()) do
-if plr.Character then
-setCollision(plr.Character, true)
-end
-end
-end
-end
-end)
-
--- =========================
--- INVISIBLE (MM2 FIX)
--- =========================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local player = Players.LocalPlayer
-
-local invisible = false
-local bodyParts = {}
-local character, humanoid, rootPart
-
-local function setupCharacter()
-character = player.Character or player.CharacterAdded:Wait()
-humanoid = character:WaitForChild("Humanoid")
-rootPart = character:WaitForChild("HumanoidRootPart")
-
-bodyParts = {}
-
-for _, v in pairs(character:GetDescendants()) do
-if v:IsA("BasePart") and v.Transparency == 0 then
-table.insert(bodyParts, v)
-end
-end
-
-end
-
-local function setInvisible(state)
-invisible = state
-
-for _, v in pairs(bodyParts) do
-v.Transparency = invisible and 0.5 or 0
-end
-
-end
-
--- 🔥 ตัวนี้เอาไปใช้กับ Toggle
-function applyInvisible(state)
-setInvisible(state)
-end
-
--- setup ครั้งแรก
-setupCharacter()
-
--- ระบบล่องหน (ของเดิม 100%)
-RunService.Heartbeat:Connect(function()
-if invisible and rootPart and humanoid then
-local cf = rootPart.CFrame
-local camOff = humanoid.CameraOffset
-
-rootPart.CFrame = cf * CFrame.new(0, -200000, 0)
-humanoid.CameraOffset = Vector3.new(
-camOff.X,
-camOff.Y + 200000,
-camOff.Z
-)
-
-RunService.RenderStepped:Wait()
-
-rootPart.CFrame = cf
-humanoid.CameraOffset = camOff
-
-end
-
-end)
-
--- กันตายแล้วพัง
-player.CharacterAdded:Connect(function()
-invisible = false
-setupCharacter()
-end)
-
--- =========================
--- GET GUN
--- =========================
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
--- =========================
--- AIM SETTINGS
--- =========================
-local AIMBOT_CONFIG = {
-
--- ⚡ Predict ยิงไกล  
-Prediction = 0.07,  
-
--- 🌍 ชดเชยแรงโน้มถ่วง  
-GravityCompensation = 0.012,  
-
--- 🎲 Randomization  
-Randomness = 0.008,  
-
--- ⚡ ความเร็วลูป  
-ShootDelay = 0.003,
-
-}
-
--- =========================
--- GET GUN
--- =========================
-local function getGun()
-
-local char = LocalPlayer.Character  
-
-if not char then  
-    return nil  
-end  
-
-return char:FindFirstChild("Gun")
-
-end
-
--- =========================
--- AUTO EQUIP GUN
--- =========================
-local lastGunEquip = 0
-
-local function equipGun()
-
-if tick() - lastGunEquip < 0.25 then  
-    return  
-end  
-
-lastGunEquip = tick()  
-
-local char = LocalPlayer.Character  
-local backpack =  
-    LocalPlayer:FindFirstChild("Backpack")  
-
-if not char or not backpack then  
-    return  
-end  
-
-if not char:FindFirstChild("Gun") then  
-
-    local gun =  
-        backpack:FindFirstChild("Gun")  
-
-    if gun then  
-        gun.Parent = char  
-    end  
-end
-
-end
-
--- =========================
--- CHECK MURDERER
--- =========================
-local function isMurderer(model)
-
-local plr =  
-    Players:GetPlayerFromCharacter(model)  
-
-if not plr then  
-    return false  
-end  
-
-local bp = plr:FindFirstChild("Backpack")  
-local char = plr.Character  
-
-if (bp and bp:FindFirstChild("Knife")) or  
-   (char and char:FindFirstChild("Knife")) then  
-
-    return true  
-end  
-
-return false
-
-end
-
--- =========================
--- BODY AIM 100%
--- =========================
-local function getSmartPart(targetChar)
-
-local hrp =  
-    targetChar:FindFirstChild(  
-        "HumanoidRootPart"  
-    )  
-
-if hrp then  
-    return hrp  
-end  
-
-return targetChar:FindFirstChild("Head")
-
-end
-
--- =========================
--- ULTRA PREDICTION
--- =========================
-local function getUltraPrediction(
-targetChar,
-originPos
-)
-
-local targetPart =  
-    getSmartPart(targetChar)  
-
-local root =  
-    targetChar:FindFirstChild(  
-        "HumanoidRootPart"  
-    )  
-
-if not targetPart or not root then  
-    return nil  
-end  
-
-local velocity =  
-    root.AssemblyLinearVelocity  
-
-local distance =  
-    (targetPart.Position  
-    - originPos).Magnitude  
-
--- ⚡ Predict  
-local travelTime =  
-    distance  
-    * AIMBOT_CONFIG.Prediction  
-    / 100  
-
-local predictedPos =  
-    targetPart.Position  
-    + (velocity * travelTime)  
-
--- 🌍 Gravity Compensation  
-predictedPos =  
-    predictedPos  
-    + Vector3.new(  
-        0,  
-        distance  
-        * AIMBOT_CONFIG.GravityCompensation,  
-        0  
-    )  
-
--- 🎲 Randomization  
-predictedPos =  
-    predictedPos  
-    + Vector3.new(  
-        math.random(-100,100)  
-        * AIMBOT_CONFIG.Randomness,  
-
-        math.random(-100,100)  
-        * AIMBOT_CONFIG.Randomness,  
-
-        math.random(-100,100)  
-        * AIMBOT_CONFIG.Randomness  
-    )  
-
--- 🔥 ยิงกลางตัว  
-predictedPos =  
-    predictedPos  
-    + Vector3.new(0, -0.2, 0)  
-
-return CFrame.new(predictedPos)
-
-end
-
--- =========================
--- WALL ORIGIN
--- =========================
-local function getWallOrigin(targetChar)
-
-local char = LocalPlayer.Character  
-
-if not char then  
-    return nil  
-end  
-
-local root =  
-    char:FindFirstChild(  
-        "HumanoidRootPart"  
-    )  
-
-local targetRoot =  
-    targetChar:FindFirstChild(  
-        "HumanoidRootPart"  
-    )  
-
-if not root or not targetRoot then  
-    return nil  
-end  
-
-local direction =  
-    (targetRoot.Position  
-    - root.Position).Unit  
-
--- 🔥 จุดยิงทะลุกำแพง  
-local pos =  
-    targetRoot.Position  
-    - (direction * 3)  
-
-return CFrame.new(pos)
-
-end
-
--- =========================
--- FIRE WALL
--- =========================
-local function fireWall()
-
-equipGun()  
-
-local gun = getGun()  
-
-if not gun then  
-    return  
-end  
-
-local shootEvent =  
-    gun:FindFirstChild("Shoot")  
-
-if not shootEvent then  
-    return  
-end  
-
--- 🔥 หา Murderer  
+  
+-- =========================  
+-- INIT PLAYERS  
+-- =========================  
 for _,plr in ipairs(  
-    Players:GetPlayers()  
+Players:GetPlayers()  
 ) do  
-
-    if plr ~= LocalPlayer  
-    and plr.Character then  
-
-        local char = plr.Character  
-
-        local humanoid =  
-            char:FindFirstChild(  
-                "Humanoid"  
-            )  
-
-        if humanoid  
-        and humanoid.Health > 0  
-        and isMurderer(char) then  
-
-            -- 🔥 จุดยิงทะลุกำแพง  
-            local originCF =  
-                getWallOrigin(char)  
-
-            if not originCF then  
-                continue  
-            end  
-
-            local targetCF =  
-                getUltraPrediction(  
-                    char,  
-                    originCF.Position  
-                )  
-
-            if targetCF then  
-
-                pcall(function()  
-
-                    shootEvent:FireServer(  
-                        originCF,  
-                        targetCF  
-                    )  
-
-                end)  
-
-                break  
-            end  
+setupPlayer(plr)  
+end  
+  
+-- PLAYER ADDED  
+table.insert(  
+getgenv().KuoESPConnections,  
+  
+Players.PlayerAdded:Connect(    
+    setupPlayer    
+)  
+  
+)  
+  
+-- PLAYER REMOVED  
+table.insert(  
+getgenv().KuoESPConnections,  
+  
+Players.PlayerRemoving:Connect(    
+    removeESP    
+)  
+  
+)  
+  
+-- =========================  
+-- MAIN LOOP  
+-- =========================  
+table.insert(  
+getgenv().KuoESPConnections,  
+  
+RunService.RenderStepped:Connect(    
+    function()    
+  
+        for _,plr in ipairs(    
+            Players:GetPlayers()    
+        ) do    
+  
+            pcall(function()    
+  
+                updateRole(plr)    
+                updateESP(plr)    
+  
+            end)    
+        end    
+    end    
+)  
+  
+)  
+-- =========================  
+-- 🔫 GUN ESP  
+-- =========================  
+  
+local GunHL = nil  
+  
+local function removeGunESP()  
+if GunHL then  
+GunHL:Destroy()  
+GunHL = nil  
+end  
+end  
+  
+local function createGunESP(gun)  
+  
+removeGunESP()    
+  
+local part =    
+    gun:IsA("BasePart") and gun    
+    or gun:FindFirstChildWhichIsA("BasePart", true)    
+  
+if not part then    
+    return    
+end    
+  
+GunHL = Instance.new("Highlight")    
+GunHL.Name = "KuoGunESP"    
+  
+GunHL.FillColor = Color3.fromRGB(0,170,255)    
+GunHL.OutlineColor = Color3.fromRGB(255,255,255)    
+  
+GunHL.FillTransparency = 0.2    
+GunHL.OutlineTransparency = 0    
+  
+GunHL.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop    
+GunHL.Adornee = gun    
+GunHL.Parent = game.CoreGui  
+  
+end  
+  
+-- =========================  
+-- 🔁 LOOP  
+-- =========================  
+task.spawn(function()  
+  
+while task.wait(0.2) do    
+  
+    if not GunESP then    
+        removeGunESP()    
+        continue    
+    end    
+  
+    local gun =    
+        workspace:FindFirstChild("GunDrop", true)    
+        or workspace:FindFirstChild("Gun", true)    
+  
+    if gun then    
+        createGunESP(gun)    
+    else    
+        removeGunESP()    
+    end    
+end  
+  
+end)  
+  
+-- =========================  
+-- 🚀 AUTO WARP GUN  
+-- =========================  
+  
+-- 🔍 หา Murderer  
+local function getMurderer()  
+for _, plr in ipairs(game.Players:GetPlayers()) do  
+if plr ~= game.Players.LocalPlayer and plr.Character then  
+if getRole(plr) == "Murderer" then  
+return plr  
+end  
+end  
+end  
+end  
+  
+-- 🔍 เช็คปืนร่วงจริง  
+local function isDroppedGun(gun)  
+if not gun then return false end  
+  
+local parent = gun.Parent  
+if not parent then return false end  
+  
+if parent:FindFirstChild("Humanoid") then return false end  
+if parent:IsA("Backpack") then return false end  
+  
+return gun:IsDescendantOf(workspace)  
+  
+end  
+  
+-- 🧠 เช็คว่าปลอดภัยไหม  
+local function isSafeToWarp(gunPart)  
+local murderer = getMurderer()  
+if not murderer or not murderer.Character then return true end  
+  
+local mRoot = murderer.Character:FindFirstChild("HumanoidRootPart")  
+if not mRoot then return true end  
+  
+local dist = (mRoot.Position - gunPart.Position).Magnitude  
+  
+-- ❌ ใกล้เกิน = อันตราย  
+if dist < SAFE_DISTANCE_GUN then  
+return false  
+end  
+  
+return true  
+  
+end  
+  
+-- 🔁 LOOP  
+task.spawn(function()  
+while task.wait(0.2) do  
+if not AUTO_WARP_GUN then continue end  
+  
+local player = game.Players.LocalPlayer  
+local char = player.Character  
+local hrp = char and char:FindFirstChild("HumanoidRootPart")  
+if not hrp then continue end  
+  
+local gun = workspace:FindFirstChild("GunDrop", true)  
+or workspace:FindFirstChild("Gun", true)  
+  
+if not isDroppedGun(gun) then  
+gotGunThisRound = false  
+continue  
+end  
+  
+if gotGunThisRound then continue end  
+  
+local targetPart = gun:IsA("BasePart") and gun  
+or gun:FindFirstChildWhichIsA("BasePart", true)  
+  
+if not targetPart then continue end  
+  
+-- 🧠 เช็คความปลอดภัย  
+if not isSafeToWarp(targetPart) then  
+continue -- ❌ ไม่วาร์ป  
+end  
+  
+gotGunThisRound = true  
+  
+local oldPos = hrp.CFrame  
+  
+-- 👻 ปิด Invisible  
+wasInvisibleBeforeWarp = invisible  
+if wasInvisibleBeforeWarp then  
+applyInvisible(false)  
+task.wait(0.05)  
+end  
+  
+-- 🚀 วาร์ป  
+hrp.CFrame = targetPart.CFrame  
+task.wait(0.15)  
+  
+-- 🔙 กลับ  
+hrp.CFrame = oldPos  
+  
+-- 👻 เปิดกลับ  
+if wasInvisibleBeforeWarp then  
+task.wait(0.05)  
+applyInvisible(true)  
+end  
+  
+end  
+  
+end)  
+  
+-- =========================  
+-- 🔫 AUTO GUN SYSTEM (FULL + 50/50 AIM)  
+-- =========================  
+  
+-- 🔍 หา Murderer  
+local function findMurderer()  
+for _, plr in ipairs(Players:GetPlayers()) do  
+if plr ~= player and plr.Character and getRole(plr) == "Murderer" then  
+return plr  
+end  
+end  
+end  
+  
+-- =========================  
+-- 🎲 RANDOM PART (50% HEAD / 50% BODY)  
+-- =========================  
+local function getRandomPart50(targetChar)  
+local head = targetChar:FindFirstChild("Head")  
+  
+-- 50% ยิงหัว  
+if head and math.random() < 0.5 then  
+return head  
+end  
+  
+-- 50% ยิงส่วนอื่น  
+local parts = {}  
+for _, v in ipairs(targetChar:GetDescendants()) do  
+if v:IsA("BasePart") and v.Name ~= "Head" then  
+table.insert(parts, v)  
+end  
+end  
+  
+if #parts > 0 then  
+return parts[math.random(1, #parts)]  
+end  
+  
+return head  
+  
+end  
+  
+-- =========================  
+-- 🎯 PREDICT AIM (50/50)  
+-- =========================  
+local function getLeadCFrame(targetChar, originPos)  
+local part = getRandomPart50(targetChar)  
+local root = targetChar:FindFirstChild("HumanoidRootPart")  
+if not part or not root then return end  
+  
+local velocity = root.AssemblyLinearVelocity  
+  
+local distance = (part.Position - originPos).Magnitude  
+local predictTime = math.clamp(distance / 200, 0.15, 0.35)  
+  
+local predictedPos = part.Position + (velocity * predictTime)  
+  
+-- ชดเชยแกน Y  
+predictedPos = predictedPos + Vector3.new(0, math.clamp(velocity.Y * 0.1, -2, 2), 0)  
+  
+return CFrame.new(predictedPos)  
+  
+end  
+  
+-- =========================  
+-- 🔫 AUTO EQUIP GUN  
+-- =========================  
+local lastGunEquip = 0  
+  
+local function equipGun()  
+if tick() - lastGunEquip < 0.3 then return end  
+lastGunEquip = tick()  
+  
+local char = player.Character  
+local backpack = player:FindFirstChild("Backpack")  
+  
+if not char or not backpack then return end  
+  
+local gun = backpack:FindFirstChild("Gun")  
+if gun then  
+gun.Parent = char  
+end  
+  
+end  
+  
+-- =========================  
+-- 🔫 AUTO SHOOT LOOP  
+-- =========================  
+task.spawn(function()  
+while task.wait(0.01) do  
+if not AUTO_SHOOT then continue end  
+  
+local target = findMurderer()  
+if not target or not target.Character then continue end  
+  
+-- 🔥 ถือปืนอัตโนมัติ  
+equipGun()  
+  
+local char = player.Character  
+local gun = char and char:FindFirstChild("Gun")  
+  
+-- ❗ ยังไม่ถือ = ไม่ยิง  
+if not gun then continue end  
+  
+local shootEvent = gun:FindFirstChild("Shoot")  
+local originPart = gun:FindFirstChild("Handle")  
+  
+if not shootEvent or not originPart then continue end  
+  
+local originCF = originPart.CFrame  
+local targetCF = getLeadCFrame(target.Character, originPart.Position)  
+  
+if targetCF then  
+pcall(function()  
+shootEvent:FireServer(originCF, targetCF)  
+end)  
+end  
+  
+end  
+  
+end)  
+  
+-- =========================  
+-- INFINITE JUMP  
+-- =========================  
+UIS.JumpRequest:Connect(function()  
+if INFINITE_JUMP then  
+local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")  
+if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end  
+end  
+end)  
+  
+-- =========================  
+-- NOCLIP  
+-- =========================  
+RunService.Stepped:Connect(function()  
+if NOCLIP then  
+local char = player.Character  
+if char then  
+for _, v in ipairs(char:GetDescendants()) do  
+if v:IsA("BasePart") then v.CanCollide = false end  
+end  
+end  
+end  
+end)  
+  
+-- =========================  
+-- AIMLOCK  
+-- =========================  
+local function getMurdererRoot()  
+for _, plr in ipairs(Players:GetPlayers()) do  
+if plr ~= player and plr.Character and getRole(plr) == "Murderer" then  
+return plr.Character:FindFirstChild("HumanoidRootPart")  
+end  
+end  
+end  
+  
+RunService.RenderStepped:Connect(function()  
+if AIMLOCK then  
+if not LOCK_TARGET or not LOCK_TARGET.Parent then  
+LOCK_TARGET = getMurdererRoot()  
+end  
+local cam = workspace.CurrentCamera  
+if LOCK_TARGET then  
+cam.CFrame = CFrame.new(cam.CFrame.Position, LOCK_TARGET.Position)  
+end  
+end  
+end)  
+  
+-- =========================  
+-- 🔪 AUTO KNIFE + AUTO EQUIP (FINAL FIX)  
+-- =========================  
+  
+local Players = game:GetService("Players")  
+local player = Players.LocalPlayer -- 🔥 แก้จาก LocalPlayers  
+  
+-- =========================  
+-- 📦 GET CHARACTER  
+-- =========================  
+local function getChar()  
+return player.Character or player.CharacterAdded:Wait()  
+end  
+  
+local function getHRP()  
+local char = getChar()  
+return char and char:FindFirstChild("HumanoidRootPart")  
+end  
+  
+-- =========================  
+-- 🔥 AUTO EQUIP KNIFE  
+-- =========================  
+local function equipKnife()  
+if tick() - lastKnifeEquip < 0.3 then return end  
+lastKnifeEquip = tick()  
+  
+local char = getChar()  
+local backpack = player:FindFirstChild("Backpack")  
+  
+if not char or not backpack then return end  
+  
+local knife = backpack:FindFirstChild("Knife")  
+if knife then  
+knife.Parent = char  
+end  
+  
+end  
+  
+local function getKnife()  
+local char = getChar()  
+return char and char:FindFirstChild("Knife")  
+end  
+  
+-- =========================  
+-- 🔪 THROW KNIFE  
+-- =========================  
+local function throwKnife(enemyRoot)  
+local knife = getKnife()  
+if not knife or not enemyRoot then return end  
+  
+local events = knife:FindFirstChild("Events")  
+local throw = events and events:FindFirstChild("KnifeThrown")  
+if not throw then return end  
+  
+local myRoot = getHRP()  
+if not myRoot then return end  
+  
+local distance = (myRoot.Position - enemyRoot.Position).Magnitude  
+local prediction = math.clamp(distance / 200, 0.1, 0.3)  
+  
+local velocity = enemyRoot.AssemblyLinearVelocity  
+local predictedPos = enemyRoot.Position + (velocity * prediction)  
+  
+throw:FireServer(  
+CFrame.new(myRoot.Position),  
+CFrame.new(predictedPos)  
+)  
+  
+end  
+  
+-- =========================  
+-- 🔪 STAB KNIFE  
+-- =========================  
+local function stabKnife(enemyRoot)  
+local knife = getKnife()  
+if not knife or not enemyRoot then return end  
+  
+local events = knife:FindFirstChild("Events")  
+if not events then return end  
+  
+local handleTouched = events:FindFirstChild("HandleTouched")  
+local stabbed = events:FindFirstChild("KnifeStabbed")  
+  
+if handleTouched then  
+handleTouched:FireServer(enemyRoot)  
+end  
+  
+if stabbed then  
+stabbed:FireServer()  
+end  
+  
+end  
+  
+-- =========================  
+-- 🎯 FIND TARGET  
+-- =========================  
+local function getNearestEnemy()  
+local hrp = getHRP()  
+if not hrp then return nil end  
+  
+local closest = nil  
+local distMin = MAX_DISTANCE  
+  
+for _, plr in pairs(Players:GetPlayers()) do  
+if plr ~= player and plr.Character then  
+local root = plr.Character:FindFirstChild("HumanoidRootPart")  
+if root then  
+local dist = (hrp.Position - root.Position).Magnitude  
+if dist < distMin then  
+distMin = dist  
+closest = plr  
+end  
+end  
+end  
+end  
+  
+return closest  
+  
+end    
+-- =========================  
+-- 🔁 AUTO KNIFE LOOP (FIX)  
+-- =========================  
+task.spawn(function()  
+while task.wait(0.01) do  
+if not AUTO_KNIFE then continue end  
+  
+local target = getNearestEnemy()  
+if not target or not target.Character then continue end  
+  
+local root = target.Character:FindFirstChild("HumanoidRootPart")  
+if not root then continue end  
+  
+equipKnife()  
+  
+local knife = getKnife()  
+if not knife then continue end -- ✅ กันยิงตอนยังไม่ถือ  
+  
+throwKnife(root)  
+  
+end  
+  
+end)  
+  
+-- =========================  
+-- 💀 ATTACK (NO THROW)  
+-- =========================  
+local function attack(plr)  
+  
+    equipKnife()  
+  
+    local knife = getKnife()  
+    if not knife then  
+        return  
+    end  
+  
+    if not plr.Character then  
+        return  
+    end  
+  
+    local enemyRoot =  
+        plr.Character:FindFirstChild(  
+            "HumanoidRootPart"  
+        )  
+  
+    if not enemyRoot then  
+        return  
+    end  
+  
+    -- 🔥 แทงระยะไกล  
+    for i = 1, 4 do  
+  
+        pcall(function()  
+  
+            stabKnife(enemyRoot)  
+  
+        end)  
+  
+        task.wait(0.02)  
+    end  
+end  
+  
+-- =========================  
+-- 🔁 KILL AURA LOOP  
+-- =========================  
+task.spawn(function()  
+  
+    while task.wait(LOOP_DELAY) do  
+  
+        if not KILL_AURA then  
+            continue  
         end  
+  
+        local target =  
+            getNearestEnemy()  
+  
+        if not target then  
+            continue  
+        end  
+  
+        equipKnife()  
+  
+        local knife = getKnife()  
+  
+        if not knife then  
+            continue  
+        end  
+  
+        attack(target)  
+  
     end  
-end
-
-end
-
--- =========================
--- LOOP
--- =========================
-task.spawn(function()
-
-while task.wait(  
-    AIMBOT_CONFIG.ShootDelay  
-) do  
-
-    if not Shot_AURA then  
-        continue  
-    end  
-
-    pcall(function()  
-        fireWall()  
-    end)  
-
-end
-
 end)
+  
+local TweenService = game:GetService("TweenService")  
+  
+local COIN_SPEED = 30  
+local SAFE_DISTANCE = 40  
+local STUCK_TIME = 1  
+  
+local currentTarget = nil  
+local lastMoveTime = tick()  
+local lastPos = nil  
+  
+-- 🔍 หาเหรียญแบบฉลาด (หลบคน)  
+local function getSmartCoin(root)  
+local bestCoin = nil  
+local bestScore = math.huge  
+  
+for _, coin in ipairs(workspace:GetDescendants()) do  
+if (coin.Name == "Coin" or coin.Name == "Coin_Server") and coin:IsA("BasePart") then  
+  
+local dist = (coin.Position - root.Position).Magnitude  
+  
+-- 🧠 เช็คศัตรูใกล้เหรียญ  
+local danger = 0  
+for _, plr in ipairs(Players:GetPlayers()) do  
+if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then  
+local d = (plr.Character.HumanoidRootPart.Position - coin.Position).Magnitude  
+if d < SAFE_DISTANCE then  
+danger = danger + (SAFE_DISTANCE - d)  
+end  
+end  
+end  
+  
+-- 🎯 score ต่ำ = ดี  
+local score = dist + (danger * 5)  
+  
+if score < bestScore then  
+bestScore = score  
+bestCoin = coin  
+end  
+  
+end  
+  
+end  
+  
+return bestCoin  
+  
+end  
+  
+-- 🚀 Tween Fly (เนียน + กันแบน)  
+local function tweenTo(root, pos)  
+local dist = (root.Position - pos).Magnitude  
+local time = dist / COIN_SPEED  
+  
+local tween = TweenService:Create(  
+root,  
+TweenInfo.new(time, Enum.EasingStyle.Linear),  
+{CFrame = CFrame.new(pos)}  
+)  
+  
+tween:Play()  
+return tween  
+  
+end  
+  
+-- 🔥 LOOP  
+task.spawn(function()  
+while task.wait(0.01) do  
+if not AUTO_COIN_COLLECT then continue end  
+  
+local char = player.Character  
+local root = char and char:FindFirstChild("HumanoidRootPart")  
+if not root then continue end  
+  
+-- ❗ ปิด Fly ปกติ  
+if flying then  
+setFly(false)  
+end  
+  
+-- 🎯 ล็อคเป้าหมาย  
+if not currentTarget or not currentTarget.Parent then  
+currentTarget = getSmartCoin(root)  
+end  
+  
+if not currentTarget then continue end  
+  
+local targetPos = currentTarget.Position + Vector3.new(0, 2, 0)  
+  
+-- 🚀 Tween ไปหา  
+local tween = tweenTo(root, targetPos)  
+  
+-- 🧠 Anti Stuck  
+local startTime = tick()  
+lastPos = root.Position  
+  
+while tween.PlaybackState == Enum.PlaybackState.Playing do  
+task.wait(0.01)  
+  
+if not AUTO_COIN_COLLECT then  
+tween:Cancel()  
+break  
+end  
+  
+-- 🧱 ติด = วาร์ป  
+if (root.Position - lastPos).Magnitude < 1 then  
+if tick() - startTime > STUCK_TIME then  
+root.CFrame = CFrame.new(targetPos)  
+break  
+end  
+else  
+startTime = tick()  
+lastPos = root.Position  
+end  
+  
+end  
+  
+-- 🔄 รีเซ็ตเป้าหมาย  
+currentTarget = nil  
+  
+end  
+  
+end)  
+  
+-- =========================  
+-- 📢 CHAT ANNOUNCE (FIXED)  
+-- =========================  
+  
+local TextChatService = game:GetService("TextChatService")  
+local ReplicatedStorage = game:GetService("ReplicatedStorage")  
+  
+-- 🔥 ส่งแชท (โคตรเสถียร)  
+local function sendChat(msg)  
+pcall(function()  
+if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then  
+  
+local channels = TextChatService:WaitForChild("TextChannels", 2)  
+local channel = channels and channels:FindFirstChild("RBXGeneral")  
+  
+if channel then  
+channel:SendAsync(msg)  
+else  
+warn("No RBXGeneral channel")  
+end  
+  
+else  
+ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents")  
+:WaitForChild("SayMessageRequest")  
+:FireServer(msg, "All")  
+end  
+  
+end)  
+  
+end  
+  
+-- 🔪 หา Murderer  
+local function getMurderer()  
+for _, plr in ipairs(Players:GetPlayers()) do  
+if plr ~= player and getRole(plr) == "Murderer" then  
+return plr  
+end  
+end  
+end  
+  
+-- 👮 หา Sheriff  
+local function getSheriffPlayer()  
+for _, plr in ipairs(Players:GetPlayers()) do  
+if plr ~= player and getRole(plr) == "Sheriff" then  
+return plr  
+end  
+end  
+end  
+  
+-- 🔁 Loop ประกาศ  
+task.spawn(function()  
+local announced = false  
+  
+while task.wait(0.1) do  
+if not CHAT_ANNOUNCE then  
+announced = false  
+continue  
+end  
+  
+if not announced then  
+local murderer = getMurderer()  
+local sheriff = getSheriffPlayer()  
+  
+if murderer and sheriff then  
+local msg = "Murderer: "..murderer.Name..  
+" | Sheriff: "..sheriff.Name..  
+" | Kuo Hub"  
+  
+sendChat(msg)  
+announced = true  
+  
+task.wait(0.01) -- ✅ ต้อง 1-2 วิ ถึงจะเสถียร  
+  
+end  
+  
+end  
+  
+-- 🔄 รีรอบใหม่  
+if not getMurderer() and not getSheriffPlayer() then  
+announced = false  
+end  
+  
+end  
+  
+end)  
+  
+-- =========================  
+-- SYSTEM: ANTI PLING (NO COLLIDE)  
+-- =========================  
+  
+local function setCollision(character, state)  
+for _, part in ipairs(character:GetDescendants()) do  
+if part:IsA("BasePart") then  
+part.CanCollide = state  
+end  
+end  
+end  
+  
+local function applyNoCollide(player)  
+if not player.Character then return end  
+  
+setCollision(player.Character, false)  
+  
+player.Character.DescendantAdded:Connect(function(part)  
+if part:IsA("BasePart") then  
+part.CanCollide = false  
+end  
+end)  
+  
+end  
+  
+-- =========================  
+-- MAIN LOOP (TOGGLE CONTROL)  
+-- =========================  
+task.spawn(function()  
+while task.wait(0.01) do  
+if Anti_Pling then  
+for _, plr in ipairs(Players:GetPlayers()) do  
+if plr.Character then  
+applyNoCollide(plr)  
+end  
+end  
+else  
+for _, plr in ipairs(Players:GetPlayers()) do  
+if plr.Character then  
+setCollision(plr.Character, true)  
+end  
+end  
+end  
+end  
+end)  
+  
+-- =========================  
+-- INVISIBLE (MM2 FIX)  
+-- =========================  
+  
+local Players = game:GetService("Players")  
+local RunService = game:GetService("RunService")  
+  
+local player = Players.LocalPlayer  
+  
+local invisible = false  
+local bodyParts = {}  
+local character, humanoid, rootPart  
+  
+local function setupCharacter()  
+character = player.Character or player.CharacterAdded:Wait()  
+humanoid = character:WaitForChild("Humanoid")  
+rootPart = character:WaitForChild("HumanoidRootPart")  
+  
+bodyParts = {}  
+  
+for _, v in pairs(character:GetDescendants()) do  
+if v:IsA("BasePart") and v.Transparency == 0 then  
+table.insert(bodyParts, v)  
+end  
+end  
+  
+end  
+  
+local function setInvisible(state)  
+invisible = state  
+  
+for _, v in pairs(bodyParts) do  
+v.Transparency = invisible and 0.5 or 0  
+end  
+  
+end  
+  
+-- 🔥 ตัวนี้เอาไปใช้กับ Toggle  
+function applyInvisible(state)  
+setInvisible(state)  
+end  
+  
+-- setup ครั้งแรก  
+setupCharacter()  
+  
+-- ระบบล่องหน (ของเดิม 100%)  
+RunService.Heartbeat:Connect(function()  
+if invisible and rootPart and humanoid then  
+local cf = rootPart.CFrame  
+local camOff = humanoid.CameraOffset  
+  
+rootPart.CFrame = cf * CFrame.new(0, -200000, 0)  
+humanoid.CameraOffset = Vector3.new(  
+camOff.X,  
+camOff.Y + 200000,  
+camOff.Z  
+)  
+  
+RunService.RenderStepped:Wait()  
+  
+rootPart.CFrame = cf  
+humanoid.CameraOffset = camOff  
+  
+end  
+  
+end)  
+  
+-- กันตายแล้วพัง  
+player.CharacterAdded:Connect(function()  
+invisible = false  
+setupCharacter()  
+end)  
+  
+-- =========================  
+-- GET GUN  
+-- =========================  
+  
+local Players = game:GetService("Players")  
+local LocalPlayer = Players.LocalPlayer  
+  
+-- =========================  
+-- AIM SETTINGS  
+-- =========================  
+local AIMBOT_CONFIG = {  
+  
+-- ⚡ Predict ยิงไกล    
+Prediction = 0.07,    
+  
+-- 🌍 ชดเชยแรงโน้มถ่วง    
+GravityCompensation = 0.012,    
+  
+-- 🎲 Randomization    
+Randomness = 0.008,    
+  
+-- ⚡ ความเร็วลูป    
+ShootDelay = 0.003,  
+  
+}  
+  
+-- =========================  
+-- GET GUN  
+-- =========================  
+local function getGun()  
+  
+local char = LocalPlayer.Character    
+  
+if not char then    
+    return nil    
+end    
+  
+return char:FindFirstChild("Gun")  
+  
+end  
+  
+-- =========================  
+-- AUTO EQUIP GUN  
+-- =========================  
+local lastGunEquip = 0  
+  
+local function equipGun()  
+  
+if tick() - lastGunEquip < 0.25 then    
+    return    
+end    
+  
+lastGunEquip = tick()    
+  
+local char = LocalPlayer.Character    
+local backpack =    
+    LocalPlayer:FindFirstChild("Backpack")    
+  
+if not char or not backpack then    
+    return    
+end    
+  
+if not char:FindFirstChild("Gun") then    
+  
+    local gun =    
+        backpack:FindFirstChild("Gun")    
+  
+    if gun then    
+        gun.Parent = char    
+    end    
+end  
+  
+end  
+  
+-- =========================  
+-- CHECK MURDERER  
+-- =========================  
+local function isMurderer(model)  
+  
+local plr =    
+    Players:GetPlayerFromCharacter(model)    
+  
+if not plr then    
+    return false    
+end    
+  
+local bp = plr:FindFirstChild("Backpack")    
+local char = plr.Character    
+  
+if (bp and bp:FindFirstChild("Knife")) or    
+   (char and char:FindFirstChild("Knife")) then    
+  
+    return true    
+end    
+  
+return false  
+  
+end  
+  
+-- =========================  
+-- BODY AIM 100%  
+-- =========================  
+local function getSmartPart(targetChar)  
+  
+local hrp =    
+    targetChar:FindFirstChild(    
+        "HumanoidRootPart"    
+    )    
+  
+if hrp then    
+    return hrp    
+end    
+  
+return targetChar:FindFirstChild("Head")  
+  
+end  
+  
+-- =========================  
+-- ULTRA PREDICTION  
+-- =========================  
+local function getUltraPrediction(  
+targetChar,  
+originPos  
+)  
+  
+local targetPart =    
+    getSmartPart(targetChar)    
+  
+local root =    
+    targetChar:FindFirstChild(    
+        "HumanoidRootPart"    
+    )    
+  
+if not targetPart or not root then    
+    return nil    
+end    
+  
+local velocity =    
+    root.AssemblyLinearVelocity    
+  
+local distance =    
+    (targetPart.Position    
+    - originPos).Magnitude    
+  
+-- ⚡ Predict    
+local travelTime =    
+    distance    
+    * AIMBOT_CONFIG.Prediction    
+    / 100    
+  
+local predictedPos =    
+    targetPart.Position    
+    + (velocity * travelTime)    
+  
+-- 🌍 Gravity Compensation    
+predictedPos =    
+    predictedPos    
+    + Vector3.new(    
+        0,    
+        distance    
+        * AIMBOT_CONFIG.GravityCompensation,    
+        0    
+    )    
+  
+-- 🎲 Randomization    
+predictedPos =    
+    predictedPos    
+    + Vector3.new(    
+        math.random(-100,100)    
+        * AIMBOT_CONFIG.Randomness,    
+  
+        math.random(-100,100)    
+        * AIMBOT_CONFIG.Randomness,    
+  
+        math.random(-100,100)    
+        * AIMBOT_CONFIG.Randomness    
+    )    
+  
+-- 🔥 ยิงกลางตัว    
+predictedPos =    
+    predictedPos    
+    + Vector3.new(0, -0.2, 0)    
+  
+return CFrame.new(predictedPos)  
+  
+end  
+  
+-- =========================  
+-- WALL ORIGIN  
+-- =========================  
+local function getWallOrigin(targetChar)  
+  
+local char = LocalPlayer.Character    
+  
+if not char then    
+    return nil    
+end    
+  
+local root =    
+    char:FindFirstChild(    
+        "HumanoidRootPart"    
+    )    
+  
+local targetRoot =    
+    targetChar:FindFirstChild(    
+        "HumanoidRootPart"    
+    )    
+  
+if not root or not targetRoot then    
+    return nil    
+end    
+  
+local direction =    
+    (targetRoot.Position    
+    - root.Position).Unit    
+  
+-- 🔥 จุดยิงทะลุกำแพง    
+local pos =    
+    targetRoot.Position    
+    - (direction * 3)    
+  
+return CFrame.new(pos)  
+  
+end  
+  
+-- =========================  
+-- FIRE WALL  
+-- =========================  
+local function fireWall()  
+  
+equipGun()    
+  
+local gun = getGun()    
+  
+if not gun then    
+    return    
+end    
+  
+local shootEvent =    
+    gun:FindFirstChild("Shoot")    
+  
+if not shootEvent then    
+    return    
+end    
+  
+-- 🔥 หา Murderer    
+for _,plr in ipairs(    
+    Players:GetPlayers()    
+) do    
+  
+    if plr ~= LocalPlayer    
+    and plr.Character then    
+  
+        local char = plr.Character    
+  
+        local humanoid =    
+            char:FindFirstChild(    
+                "Humanoid"    
+            )    
+  
+        if humanoid    
+        and humanoid.Health > 0    
+        and isMurderer(char) then    
+  
+            -- 🔥 จุดยิงทะลุกำแพง    
+            local originCF =    
+                getWallOrigin(char)    
+  
+            if not originCF then    
+                continue    
+            end    
+  
+            local targetCF =    
+                getUltraPrediction(    
+                    char,    
+                    originCF.Position    
+                )    
+  
+            if targetCF then    
+  
+                pcall(function()    
+  
+                    shootEvent:FireServer(    
+                        originCF,    
+                        targetCF    
+                    )    
+  
+                end)    
+  
+                break    
+            end    
+        end    
+    end    
+end  
+  
+end  
+  
+-- =========================  
+-- LOOP  
+-- =========================  
+task.spawn(function()  
+  
+while task.wait(    
+    AIMBOT_CONFIG.ShootDelay    
+) do    
+  
+    if not Shot_AURA then    
+        continue    
+    end    
+  
+    pcall(function()    
+        fireWall()    
+    end)    
+  
+end  
+  
+end)  
 
--- =========================
--- Info
--- =========================
+-- =========================  
+-- Info  
+-- =========================  
 
 Info:Section("📌 KuoHub Information | ข้อมูลสคริปต์")
 
 Info:Button({
-    Title = "📅 Last Update | อัปเดตล่าสุด : 28/05/2026",
-    Callback = function()
-    end
+Title = "📅 Last Update | อัปเดตล่าสุด : 19/06/2026",
+Callback = function()
+end
 })
 
 Info:Button({
-    Title = "🇹🇭 Developed By Thai | พัฒนาโดยคนไทย",
-    Callback = function()
-    end
+Title = "🇹🇭 Developed By Thai | พัฒนาโดยคนไทย",
+Callback = function()
+end
 })
 
 Info:Button({
-    Title = "⚡ Script Version | เวอร์ชันสคริปต์ : v9.0 FUTURISTIC",
-    Callback = function()
-    end
+Title = "⚡ Script Version | เวอร์ชันสคริปต์ : v9.0.1 FUTURISTIC",
+Callback = function()
+end
 })
 
 Info:Button({
-    Title = "🛠 Status | สถานะ : Stable",
-    Callback = function()
-    end
-})
-
--- =========================
--- UI
--- =========================
-Home:AddDiscordInvite({
-Name = "Kuo Hub",
-Description = "Join server",
-Logo = "rbxassetid://126460540157931",
-Invite = "https://discord.gg/Apn2j9Fez",
-})
-Home:Toggle({Title="ESP",Desc="ไฮไลต์ผู้เล่น",Callback=function(v) ESP_ENABLED=v end})
-Home:Toggle({Title ="Gun ESP",Desc ="ไฮไลต์ปืนตก",Callback =function(v) GunESP =v end})
-Home:Toggle({Title="Fly",Desc="บิน",Callback=function(v) setFly(v) end})
-Home:Toggle({Title="Auto Warp Gun",Desc="วาร์ปเก็บปืน",Callback=function(v) AUTO_WARP_GUN=v end})
-Home:Toggle({Title="Infinite Jump",Desc="กระโดดไม่จำกัด",Callback=function(v) INFINITE_JUMP=v end})
-Home:Toggle({Title="NoClip",Desc="ทะลุกำแพง",Callback=function(v) NOCLIP=v end})
-
-Combat:Toggle({Title="Aim Lock",Desc="ล็อคฆาตกร",Callback=function(v) AIMLOCK=v LOCK_TARGET=nil end})
-Combat:Toggle({Title="Auto Shoot",Desc="ยิงออโต้",Callback=function(v) AUTO_SHOOT=v end})
-Combat:Toggle({
-Title="Auto Knife",
-Desc="ปามีดอัตโนมัติ",
-Callback=function(v)
-AUTO_KNIFE=v
-end
-})
-Combat:Toggle({
-Title="Kill Aura",
-Desc="ฆ่าทุกคนอัตโนมัติ",
-Callback=function(v)
-KILL_AURA=v
+Title = "🛠 Status : ✔️| สถานะ : Stable✔️",
+Callback = function()
 end
 })
 
-Home:Toggle({
-Title = "Auto Coin Collect",
-Desc = "ออโต้เก็บเหรียญ",
-Callback = function(v)
-AUTO_COIN_COLLECT = v
+Info:Button({
+Title = "📃 Punk status : Yes | สถานะพังค์ชั้น : ยังใช้งานได้",
+Callback = function()
 end
 })
-
-Home:Toggle({
-Title="Reveal Role",
-Desc="เปิดเผยวายร้าย",
-Callback=function(v)
-CHAT_ANNOUNCE = v
-end
+-- =========================  
+-- UI  
+-- =========================  
+Home:AddDiscordInvite({  
+Name = "Kuo Hub",  
+Description = "Join server",  
+Logo = "rbxassetid://126460540157931",  
+Invite = "https://discord.gg/Apn2j9Fez",  
 })
+Home:Toggle({Title="ESP",Desc="ไฮไลต์ผู้เล่น",Callback=function(v) ESP_ENABLED=v end})  
+Home:Toggle({Title ="Gun ESP",Desc ="ไฮไลต์ปืนตก",Callback =function(v) GunESP =v end})  
+Home:Toggle({Title="Fly",Desc="บิน",Callback=function(v) setFly(v) end})  
+Home:Toggle({Title="Auto Warp Gun",Desc="วาร์ปเก็บปืน",Callback=function(v) AUTO_WARP_GUN=v end})  
+Home:Toggle({Title="Infinite Jump",Desc="กระโดดไม่จำกัด",Callback=function(v) INFINITE_JUMP=v end})  
+Home:Toggle({Title="NoClip",Desc="ทะลุกำแพง",Callback=function(v) NOCLIP=v end})  
+  
+Combat:Toggle({Title="Aim Lock",Desc="ล็อคฆาตกร",Callback=function(v) AIMLOCK=v LOCK_TARGET=nil end})  
+Combat:Toggle({Title="Auto Shoot",Desc="ยิงออโต้",Callback=function(v) AUTO_SHOOT=v end})  
+Combat:Toggle({  
+Title="Auto Knife",  
+Desc="ปามีดอัตโนมัติ",  
+Callback=function(v)  
+AUTO_KNIFE=v  
+end  
+})  
+Combat:Toggle({  
+Title="Kill Aura",  
+Desc="ฆ่าทุกคนอัตโนมัติ",  
+Callback=function(v)  
+KILL_AURA=v  
+end  
+})  
+  
+Home:Toggle({  
+Title = "Auto Coin Collect",  
+Desc = "ออโต้เก็บเหรียญ",  
+Callback = function(v)  
+AUTO_COIN_COLLECT = v  
+end  
+})  
+  
+Home:Toggle({  
+Title="Reveal Role",  
+Desc="เปิดเผยวายร้าย",  
+Callback=function(v)  
+CHAT_ANNOUNCE = v  
+end  
+})  
+  
+Home:Toggle({  
+Title="Anti-Fling",  
+Desc="กันปลิง",  
+Callback=function(v)  
+Anti_Pling = v  
+end  
+})  
+  
+Combat:Toggle({  
+Title = "Shoot through the wall",  
+Desc = "ยิงทะลุกำแพง",  
+Callback = function(v)  
+Shot_AURA = v  
+end  
+})  
+  
+Combat:Toggle({  
+Title = "Invisible Mode",  
+Desc = "ร่องหน",  
+Callback = function(v)  
+applyInvisible(v)  
+end  
+})  
 
-Home:Toggle({
-Title="Anti-Fling",
-Desc="กันปลิง",
-Callback=function(v)
-Anti_Pling = v
-end
-})
+--========================
+-- FEEDBACK TAB
+--========================
 
-Combat:Toggle({
-Title = "Shoot through the wall",
-Desc = "ยิงทะลุกำแพง",
-Callback = function(v)
-Shot_AURA = v
-end
-})
+local Feedback = Window:Tab("📝 Feedback")
 
-Combat:Toggle({
-Title = "Invisible Mode",
-Desc = "ร่องหน",
-Callback = function(v)
-applyInvisible(v)
-end
-})
-
-getgenv().SpeedValue = 16
-
+--========================
+-- SERVICES
+--========================
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
+local MarketplaceService = game:GetService("MarketplaceService")
 
-local function getChar()
-return lp.Character or lp.CharacterAdded:Wait()
-end
+local player = Players.LocalPlayer
+local WEBHOOK = "https://discord.com/api/webhooks/1527850015211389108/Is3vaQ_-VngplDfF0D3Xgp70RC-kDQ4TpddG9Ed3Q1ZiICMhviPCAZkhhv1VeRse9T5r"
 
-local function applySpeed(v)
-local char = getChar()
-local hum = char and char:FindFirstChildOfClass("Humanoid")
-if hum then
-hum.WalkSpeed = v
-end
+local req =
+    (syn and syn.request) or
+    (http and http.request) or
+    http_request or
+    (fluxus and fluxus.request) or
+    request
+
+--========================
+-- GAME NAME
+--========================
+local function getGame()
+    local ok, info = pcall(function()
+        return MarketplaceService:GetProductInfo(game.PlaceId)
+    end)
+
+    return ok and info.Name or ("Place "..game.PlaceId)
 end
 
 --========================
--- SLIDER
+-- SEND FEEDBACK
 --========================
-Home:AddSlider({
-Name = "Adjust walking speed",
-Min = 16,
-Max = 200,
-Default = 16,
-Callback = function(v)
-getgenv().SpeedValue = v
-applySpeed(v)
+local function sendFeedback(message)
+
+    if not req then
+        return false
+    end
+
+    local data = {
+        embeds = {{
+            title = "📩 New Feedback",
+            color = 0x8A2BE2,
+
+            description =
+                "👤 **Player :** "..player.Name..
+                "\n🆔 **UserId :** "..player.UserId..
+                "\n🌍 **Place :** "..getGame()..
+                "\n\n💬 **Message**"..
+                "\n-----------------------"..
+                "\n"..message..
+                "\n-----------------------"..
+                "\n\n🕒 "..os.date("%d/%m/%Y %I:%M %p"),
+
+            footer = {
+                text = "Kuo Hub Feedback System"
+            }
+        }}
+    }
+
+    local ok = pcall(function()
+        req({
+            Url = WEBHOOK,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(data)
+        })
+    end)
+
+    return ok
 end
+
+--========================
+-- UI
+--========================
+
+local FeedbackMessage = ""
+local LastSend = 0
+
+Feedback:Section("📝 Feedback")
+
+Feedback:AddInput({
+    Title = "Feedback",
+    Placeholder = "Write your feedback here...",
+    Callback = function(text)
+        FeedbackMessage = text
+    end
 })
 
---========================
--- MAIN MOVEMENT LOOP (FIXED)
---========================
-task.spawn(function()
-while task.wait(0.05) do
-local char = lp.Character
-if char then
-local hrp = char:FindFirstChild("HumanoidRootPart")
-local hum = char:FindFirstChildOfClass("Humanoid")
+Feedback:Button({
+    Title = "📨 Send Feedback",
+    Callback = function()
 
-if hrp and hum then
-local dir = hum.MoveDirection
+        if FeedbackMessage:gsub("%s+","") == "" then
+            Window:Notify({
+                Title = "Feedback",
+                Desc = "⚠ กรุณาพิมพ์ข้อความก่อน",
+                Time = 3
+            })
+            return
+        end
 
-if dir.Magnitude > 0 then
-hrp.AssemblyLinearVelocity = dir * getgenv().SpeedValue
-else
--- 🔥 stop clean (กันลื่น)
-hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
-end
-end
-end
+        if tick() - LastSend < 5 then
+            Window:Notify({
+                Title = "Feedback",
+                Desc = "⌛ กรุณารอ 5 วินาทีก่อนส่งอีกครั้ง",
+                Time = 3
+            })
+            return
+        end
 
-end
+        LastSend = tick()
 
-end)
+        if sendFeedback(FeedbackMessage) then
+            Window:Notify({
+                Title = "Feedback",
+                Desc = "✅ ส่งข้อเสนอแนะเรียบร้อย",
+                Time = 3
+            })
+            FeedbackMessage = ""
+        else
+            Window:Notify({
+                Title = "Feedback",
+                Desc = "❌ ส่งไม่สำเร็จ",
+                Time = 3
+            })
+        end
 
---========================
--- RESPWAN FIX
---========================
-lp.CharacterAdded:Connect(function()
-task.wait(0.5)
-applySpeed(getgenv().SpeedValue)
-end)
-
-Home:AddSlider({
-Name = "Adjust flight speed",
-Min = 16,
-Max = 200,
-Default = 60,
-Callback = function(v)
-speed = v
-end
+    end
 })
-
-Home:AddSlider({
-Name = "Coin Collect Speed",
-Min = 16,
-Max = 200,
-Default = 30,
-Callback = function(v)
-COIN_SPEED = v
-end
-})
-
--- KEY
-UIS.InputBegan:Connect(function(i,g)
-if not g and i.KeyCode == Enum.KeyCode.F then
-setFly(not flying)
-end
+  
+getgenv().SpeedValue = 16  
+  
+local Players = game:GetService("Players")  
+local lp = Players.LocalPlayer  
+  
+local function getChar()  
+return lp.Character or lp.CharacterAdded:Wait()  
+end  
+  
+local function applySpeed(v)  
+local char = getChar()  
+local hum = char and char:FindFirstChildOfClass("Humanoid")  
+if hum then  
+hum.WalkSpeed = v  
+end  
+end  
+  
+--========================  
+-- SLIDER  
+--========================  
+Home:AddSlider({  
+Name = "Adjust walking speed",  
+Min = 16,  
+Max = 200,  
+Default = 16,  
+Callback = function(v)  
+getgenv().SpeedValue = v  
+applySpeed(v)  
+end  
+})  
+  
+--========================  
+-- MAIN MOVEMENT LOOP (FIXED)  
+--========================  
+task.spawn(function()  
+while task.wait(0.05) do  
+local char = lp.Character  
+if char then  
+local hrp = char:FindFirstChild("HumanoidRootPart")  
+local hum = char:FindFirstChildOfClass("Humanoid")  
+  
+if hrp and hum then  
+local dir = hum.MoveDirection  
+  
+if dir.Magnitude > 0 then  
+hrp.AssemblyLinearVelocity = dir * getgenv().SpeedValue  
+else  
+-- 🔥 stop clean (กันลื่น)  
+hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)  
+end  
+end  
+end  
+  
+end  
+  
+end)  
+  
+--========================  
+-- RESPWAN FIX  
+--========================  
+lp.CharacterAdded:Connect(function()  
+task.wait(0.5)  
+applySpeed(getgenv().SpeedValue)  
+end)  
+  
+Home:AddSlider({  
+Name = "Adjust flight speed",  
+Min = 16,  
+Max = 200,  
+Default = 60,  
+Callback = function(v)  
+speed = v  
+end  
+})  
+  
+Home:AddSlider({  
+Name = "Coin Collect Speed",  
+Min = 16,  
+Max = 200,  
+Default = 30,  
+Callback = function(v)  
+COIN_SPEED = v  
+end  
+})  
+  
+-- KEY  
+UIS.InputBegan:Connect(function(i,g)  
+if not g and i.KeyCode == Enum.KeyCode.F then  
+setFly(not flying)  
+end  
 end)
