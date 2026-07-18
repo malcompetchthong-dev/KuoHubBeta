@@ -253,6 +253,144 @@ Home:AddSlider({
     end
 })
 
+--========================
+-- FEEDBACK TAB
+--========================
+
+local Feedback = Window:Tab("📝 Feedback")
+
+--========================
+-- SERVICES
+--========================
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+
+local player = Players.LocalPlayer
+local WEBHOOK = "https://discord.com/api/webhooks/1527850015211389108/Is3vaQ_-VngplDfF0D3Xgp70RC-kDQ4TpddG9Ed3Q1ZiICMhviPCAZkhhv1VeRse9T5r"
+
+local req =
+    (syn and syn.request) or
+    (http and http.request) or
+    http_request or
+    (fluxus and fluxus.request) or
+    request
+
+--========================
+-- GAME NAME
+--========================
+local function getGame()
+    local ok, info = pcall(function()
+        return MarketplaceService:GetProductInfo(game.PlaceId)
+    end)
+
+    return ok and info.Name or ("Place "..game.PlaceId)
+end
+
+--========================
+-- SEND FEEDBACK
+--========================
+local function sendFeedback(message)
+
+    if not req then
+        return false
+    end
+
+    local data = {
+        embeds = {{
+            title = "📩 New Feedback",
+            color = 0x8A2BE2,
+
+            description =
+                "👤 **Player :** "..player.Name..
+                "\n🆔 **UserId :** "..player.UserId..
+                "\n🌍 **Place :** "..getGame()..
+                "\n\n💬 **Message**"..
+                "\n-----------------------"..
+                "\n"..message..
+                "\n-----------------------"..
+                "\n\n🕒 "..os.date("%d/%m/%Y %I:%M %p"),
+
+            footer = {
+                text = "Kuo Hub Feedback System"
+            }
+        }}
+    }
+
+    local ok = pcall(function()
+        req({
+            Url = WEBHOOK,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(data)
+        })
+    end)
+
+    return ok
+end
+
+--========================
+-- UI
+--========================
+
+local FeedbackMessage = ""
+local LastSend = 0
+
+Feedback:Section("📝 Feedback")
+
+Feedback:AddInput({
+    Title = "Feedback",
+    Placeholder = "Write your feedback here...",
+    Callback = function(text)
+        FeedbackMessage = text
+    end
+})
+
+Feedback:Button({
+    Title = "📨 Send Feedback",
+    Callback = function()
+
+        if FeedbackMessage:gsub("%s+","") == "" then
+            Window:Notify({
+                Title = "Feedback",
+                Desc = "⚠ กรุณาพิมพ์ข้อความก่อน",
+                Time = 3
+            })
+            return
+        end
+
+        if tick() - LastSend < 5 then
+            Window:Notify({
+                Title = "Feedback",
+                Desc = "⌛ กรุณารอ 5 วินาทีก่อนส่งอีกครั้ง",
+                Time = 3
+            })
+            return
+        end
+
+        LastSend = tick()
+
+        if sendFeedback(FeedbackMessage) then
+            Window:Notify({
+                Title = "Feedback",
+                Desc = "✅ ส่งข้อเสนอแนะเรียบร้อย",
+                Time = 3
+            })
+            FeedbackMessage = ""
+        else
+            Window:Notify({
+                Title = "Feedback",
+                Desc = "❌ ส่งไม่สำเร็จ",
+                Time = 3
+            })
+        end
+
+    end
+})
+
+
 -- KEY
 UIS.InputBegan:Connect(function(i,g)
     if not g and i.KeyCode == Enum.KeyCode.F then
