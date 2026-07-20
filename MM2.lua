@@ -1989,20 +1989,22 @@ applyInvisible(v)
 end  
 })  
 
---========================
+--========================================================
 -- FEEDBACK TAB
---========================
+--========================================================
 
 local Feedback = Window:Tab("📝 Feedback")
 
---========================
+--========================================================
 -- SERVICES
---========================
+--========================================================
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 
 local player = Players.LocalPlayer
+
 local WEBHOOK = "https://discord.com/api/webhooks/1527850015211389108/Is3vaQ_-VngplDfF0D3Xgp70RC-kDQ4TpddG9Ed3Q1ZiICMhviPCAZkhhv1VeRse9T5r"
 
 local req =
@@ -2012,118 +2014,317 @@ local req =
     (fluxus and fluxus.request) or
     request
 
---========================
+if not req then
+    warn("Executor doesn't support request.")
+    return
+end
+
+--========================================================
 -- GAME NAME
---========================
+--========================================================
+
 local function getGame()
-    local ok, info = pcall(function()
+
+    local ok,info = pcall(function()
         return MarketplaceService:GetProductInfo(game.PlaceId)
     end)
 
     return ok and info.Name or ("Place "..game.PlaceId)
+
 end
 
---========================
--- SEND FEEDBACK
---========================
+--========================================================
+-- DATA
+--========================================================
+
+local FeedbackMessage = ""
+local FeedbackType = "Suggestion"
+local LastSend = 0
+
+--========================================================
+-- FILTER
+--========================================================
+
+local blacklist = {
+    "67","555","123","abc","asdf","qwerty",
+    "กกก","หกด","test","hi","hello",
+    "ok","gg","ez","lol",".","..","...",
+    "?","???"
+}
+
+local badWords = {
+    "ควย",
+    "เหี้ย",
+    "สัส",
+    "สัตว์",
+    "ไอ้สัตว์",
+    "โปรกาก",
+    "สคริปกาก",
+    "สคริปต์กาก",
+    "สคริปต์กากๆ",
+    "กาก",
+    "fuck",
+    "shit",
+    "bitch",
+    "asshole",
+    "motherfucker",
+    "kuy",
+    "kys"
+}
+
+--========================================================
+-- SEND WEBHOOK
+--========================================================
+
 local function sendFeedback(message)
 
-    if not req then
-        return false
-    end
-
     local data = {
+
         embeds = {{
+
             title = "📩 New Feedback",
+
             color = 0x8A2BE2,
 
             description =
-                "👤 **Player :** "..player.Name..
+                "📂 **Type :** "..FeedbackType..
+
+                "\n\n👤 **Player :** "..player.Name..
+
                 "\n🆔 **UserId :** "..player.UserId..
-                "\n🌍 **Place :** "..getGame()..
+
+                "\n🌍 **Game :** "..getGame()..
+
                 "\n\n💬 **Message**"..
+
                 "\n-----------------------"..
+
                 "\n"..message..
+
                 "\n-----------------------"..
+
                 "\n\n🕒 "..os.date("%d/%m/%Y %I:%M %p"),
 
             footer = {
+
                 text = "Kuo Hub Feedback System"
+
             }
+
         }}
+
     }
 
-    local ok = pcall(function()
+    return pcall(function()
+
         req({
+
             Url = WEBHOOK,
+
             Method = "POST",
+
             Headers = {
+
                 ["Content-Type"] = "application/json"
+
             },
+
             Body = HttpService:JSONEncode(data)
+
         })
+
     end)
 
-    return ok
 end
 
---========================
+--========================================================
 -- UI
---========================
-
-local FeedbackMessage = ""
-local LastSend = 0
+--========================================================
 
 Feedback:Section("📝 Feedback")
 
-Feedback:AddInput({
-    Title = "Feedback",
-    Placeholder = "Write your feedback here...",
-    Callback = function(text)
-        FeedbackMessage = text
+Feedback:AddDropdown({
+
+    Title = "📂 Type",
+
+    Values = {
+
+        "🐞 Bug Report",
+
+        "💡 Suggestion",
+
+        "📦 Other"
+
+    },
+
+    Default = "💡 Suggestion",
+
+    Callback = function(v)
+
+        if v == "🐞 Bug Report" then
+
+            FeedbackType = "Bug Report"
+
+        elseif v == "💡 Suggestion" then
+
+            FeedbackType = "Suggestion"
+
+        else
+
+            FeedbackType = "Other"
+
+        end
+
     end
+
+})
+
+Feedback:AddInput({
+
+    Title = "Feedback",
+
+    Placeholder = "Write your feedback here...",
+
+    Callback = function(text)
+
+        FeedbackMessage = text
+
+    end
+
 })
 
 Feedback:Button({
+
     Title = "📨 Send Feedback",
+
     Callback = function()
 
-        if FeedbackMessage:gsub("%s+","") == "" then
+        local msg = FeedbackMessage:gsub("^%s+",""):gsub("%s+$","")
+
+        if msg == "" then
+
             Window:Notify({
-                Title = "Feedback",
-                Desc = "⚠ กรุณาพิมพ์ข้อความก่อน",
-                Time = 3
+
+                Title="Feedback",
+
+                Desc="⚠ กรุณาพิมพ์ข้อความก่อน",
+
+                Time=3
+
             })
+
             return
+
         end
 
-        if tick() - LastSend < 5 then
+        if #msg < 10 then
+
             Window:Notify({
-                Title = "Feedback",
-                Desc = "⌛ กรุณารอ 5 วินาทีก่อนส่งอีกครั้ง",
-                Time = 3
+
+                Title="Feedback",
+
+                Desc="⚠ กรุณาพิมพ์อย่างน้อย 10 ตัวอักษร",
+
+                Time=3
+
             })
+
             return
+
+        end
+
+        local lower = msg:lower()
+
+        for _,v in ipairs(blacklist) do
+
+            if lower == v then
+
+                Window:Notify({
+
+                    Title="Feedback",
+
+                    Desc="⚠ กรุณาส่งข้อเสนอแนะจริง",
+
+                    Time=3
+
+                })
+
+                return
+
+            end
+
+        end
+
+        for _,word in ipairs(badWords) do
+
+            if lower:find(word,1,true) then
+
+                Window:Notify({
+
+                    Title="Feedback",
+
+                    Desc="⚠ กรุณาใช้คำสุภาพ",
+
+                    Time=3
+
+                })
+
+                return
+
+            end
+
+        end
+
+        if tick()-LastSend < 5 then
+
+            Window:Notify({
+
+                Title="Feedback",
+
+                Desc="⌛ กรุณารอ 5 วินาทีก่อนส่งอีกครั้ง",
+
+                Time=3
+
+            })
+
+            return
+
         end
 
         LastSend = tick()
 
-        if sendFeedback(FeedbackMessage) then
+        local ok = sendFeedback(msg)
+
+        if ok then
+
             Window:Notify({
-                Title = "Feedback",
-                Desc = "✅ ส่งข้อเสนอแนะเรียบร้อย",
-                Time = 3
+
+                Title="Feedback",
+
+                Desc="✅ ส่งข้อเสนอแนะเรียบร้อย",
+
+                Time=3
+
             })
+
             FeedbackMessage = ""
+
         else
+
             Window:Notify({
-                Title = "Feedback",
-                Desc = "❌ ส่งไม่สำเร็จ",
-                Time = 3
+
+                Title="Feedback",
+
+                Desc="❌ ส่งไม่สำเร็จ",
+
+                Time=3
+
             })
+
         end
 
     end
+
 })
   
 getgenv().SpeedValue = 16  
