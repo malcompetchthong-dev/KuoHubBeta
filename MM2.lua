@@ -2141,42 +2141,21 @@ end
 -- UI
 --========================================================
 
+local FeedbackType = "💡 Suggestion"
+
 Feedback:Section("📝 Feedback")
 
 Feedback:AddDropdown({
-
     Title = "📂 Type",
-
     Values = {
-
         "🐞 Bug Report",
-
         "💡 Suggestion",
-
         "📦 Other"
-
     },
-
     Default = "💡 Suggestion",
-
     Callback = function(v)
-
-        if v == "🐞 Bug Report" then
-
-            FeedbackType = "Bug Report"
-
-        elseif v == "💡 Suggestion" then
-
-            FeedbackType = "Suggestion"
-
-        else
-
-            FeedbackType = "Other"
-
-        end
-
+        FeedbackType = v
     end
-
 })
 
 Feedback:AddInput({
