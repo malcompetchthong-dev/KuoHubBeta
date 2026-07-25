@@ -292,45 +292,6 @@ local function getGame()
     return ok and info.Name or ("Place "..game.PlaceId)
 
 end
-local Feedback = Window:Tab("📝 Feedback")
-
---========================================================
--- SERVICES
---========================================================
-
-local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
-local MarketplaceService = game:GetService("MarketplaceService")
-
-local player = Players.LocalPlayer
-
-local WEBHOOK = "https://discord.com/api/webhooks/1527850015211389108/Is3vaQ_-VngplDfF0D3Xgp70RC-kDQ4TpddG9Ed3Q1ZiICMhviPCAZkhhv1VeRse9T5r"
-
-local req =
-    (syn and syn.request) or
-    (http and http.request) or
-    http_request or
-    (fluxus and fluxus.request) or
-    request
-
-if not req then
-    warn("Executor doesn't support request.")
-    return
-end
-
---========================================================
--- GAME NAME
---========================================================
-
-local function getGame()
-
-    local ok,info = pcall(function()
-        return MarketplaceService:GetProductInfo(game.PlaceId)
-    end)
-
-    return ok and info.Name or ("Place "..game.PlaceId)
-
-end
 
 --========================================================
 -- DATA
