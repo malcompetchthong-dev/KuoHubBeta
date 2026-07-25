@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luau Code Encoder / Decoder</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1e1e2e;
+    color: #cdd6f4;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #1e1e2e;
+    border-radius: 12px;
+  }
+  h2 {
+    text-align: center;
+    color: #89b4fa;
+    margin-bottom: 20px;
+  }
+  .mode-btns {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    justify-content: center;
+  }
+  .mode-btns button {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-active {
+    background: #89b4fa;
+    color: #1e1e2e;
+  }
+  .btn-inactive {
+    background: #45475a;
+    color: #cdd6f4;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .lbl-in { color: #a6e3a1; }
+  .lbl-out { color: #f38ba8; }
+  textarea {
+    width: 100%;
+    height: 320px;
+    background: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+    line-height: 1.5;
+  }
+  #outputCode {
+    background: #181825;
+  }
+  .action-btns {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .action-btns button {
+    padding: 10px 28px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-process { background: #a6e3a1; color: #1e1e2e; }
+  .btn-copy { background: #f9e2af; color: #1e1e2e; }
+  .btn-clear { background: #f38ba8; color: #1e1e2e; }
+  #statusMsg {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #6c7086;
+    min-height: 20px;
+  }
+  .info-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: #181825;
+    border-radius: 8px;
+    border-left: 4px solid #89b4fa;
+  }
+  .info-box h4 {
+    margin: 0 0 8px 0;
+    color: #89b4fa;
+    font-size: 14px;
+  }
+  .info-box ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    color: #bac2de;
+    line-height: 1.8;
+  }
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>🔐 Luau Code Encoder / Decoder</h2>
+
+  <div class="mode-btns">
+    <button id="btnEncode" onclick="setMode('encode')">🔒 Encode</button>
+    <button id="btnDecode" onclick="setMode('decode')">🔓 Decode</button>
+  </div>
+
+  <div class="grid">
+    <div>
+      <label id="lblInput" class="lbl-in">📥 Input (Luau Code)</label>
+      <textarea id="inputCode" placeholder="-- วางโค้ด Luau ที่นี่..."></textarea>
+    </div>
+    <div>
+      <label id="lblOutput" class="lbl-out">📤 Output (Encoded)</label>
+      <textarea id="outputCode" readonly placeholder="ผลลัพธ์จะปรากฏที่นี่..."></textarea>
+    </div>
+  </div>
+
+  <div class="action-btns">
+    <button class="btn-process" onclick="processCode()">⚡ ประมวลผล</button>
+    <button class="btn-copy" onclick="copyOutput()">📋 คัดลอกผลลัพธ์</button>
+    <button class="btn-clear" onclick="clearAll()">🗑️ ล้างทั้งหมด</button>
+  </div>
+
+  <div id="statusMsg"></div>
+
+  <div class="info-box">
+    <h4>ℹ️ วิธีใช้งาน</h4>
+    <ul>
+      <li><b>Encode:</b> แปลงโค้ด Luau เป็น byte array ที่รองรับภาษาไทยและ Unicode ทั้งหมด</li>
+      <li><b>Decode:</b> แปลง byte array กลับมาเป็นโค้ดต้นฉบับ</li>
+      <li>รองรับ emoji, ภาษาไทย, ภาษาจีน และอักขระพิเศษทุกชนิด</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  let currentMode = 'encode';
+
+  function setMode(mode) {
+    currentMode = mode;
+    const btnEncode = document.getElementById('btnEncode');
+    const btnDecode = document.getElementById('btnDecode');
+    const lblInput = document.getElementById('lblInput');
+    const lblOutput = document.getElementById('lblOutput');
+
+    if (mode === 'encode') {
+      btnEncode.className = 'btn-active';
+      btnDecode.className = 'btn-inactive';
+      lblInput.textContent = '📥 Input (Luau Code)';
+      lblOutput.textContent = '📤 Output (Encoded)';
+    } else {
+      btnDecode.className = 'btn-active';
+      btnEncode.className = 'btn-inactive';
+      lblInput.textContent = '📥 Input (Encoded Code)';
+      lblOutput.textContent = '📤 Output (Decoded Luau)';
+    }
+    showStatus('โหมด: ' + (mode === 'encode' ? 'เข้ารหัส' : 'ถอดรหัส'), '#89b4fa');
+  }
+
+  function showStatus(msg, color) {
+    const el = document.getElementById('statusMsg');
+    el.textContent = msg;
+    el.style.color = color || '#6c7086';
+  }
+
+  function luauEncode(code) {
+    const bytes = [];
+    const encoder = new TextEncoder();
+    const arr = encoder.encode(code);
+    for (let i = 0; i < arr.length; i++) {
+      bytes.push(arr[i]);
+    }
+    const byteStr = bytes.join(',');
+    return `local b={${byteStr}};local s="";for i=1,#b do s=s..string.char(b[i])end;loadstring(s)()`;
+  }
+
+  function luauDecode(code) {
+    const byteMatch = code.match(/\{([\d,\s]+)\}/);
+    if (byteMatch) {
+      const bytes = byteMatch[1].split(',').map(b => parseInt(b.trim()));
+      const arr = new Uint8Array(bytes);
+      return new TextDecoder().decode(arr);
+    }
+    return '// ไม่พบรูปแบบที่รองรับสำหรับการถอดรหัส';
+  }
+
+  function processCode() {
+    const input = document.getElementById('inputCode').value;
+    const output = document.getElementById('outputCode');
+
+    if (!input.trim()) {
+      showStatus('⚠️ กรุณาใส่โค้ดก่อน', '#f38ba8');
+      return;
+    }
+
+    try {
+      if (currentMode === 'encode') {
+        const result = luauEncode(input);
+        output.value = result;
+        showStatus('✅ เข้ารหัสสำเร็จ! ขนาด: ' + input.length + ' → ' + result.length + ' ตัวอักษร', '#a6e3a1');
+      } else {
+        const result = luauDecode(input);
+        output.value = result;
+        showStatus('✅ ถอดรหัสสำเร็จ!', '#a6e3a1');
+      }
+    } catch (e) {
+      output.value = '// Error: ' + e.message;
+      showStatus('❌ เกิดข้อผิดพลาด: ' + e.message, '#f38ba8');
+    }
+  }
+
+  function copyOutput() {
+    const output = document.getElementById('outputCode');
+    if (!output.value) {
+      showStatus('⚠️ ไม่มีข้อความให้คัดลอก', '#f38ba8');
+      return;
+    }
+    output.select();
+    document.execCommand('copy');
+    showStatus('📋 คัดลอกไปยังคลิปบอร์ดแล้ว!', '#f9e2af');
+  }
+
+  function clearAll() {
+    document.getElementById('inputCode').value = '';
+    document.getElementById('outputCode').value = '';
+    showStatus('🗑️ ล้างข้อมูลทั้งหมดแล้ว', '#6c7086');
+  }
+
+  setMode('encode');
+</script>
+</body>
+        </html>
