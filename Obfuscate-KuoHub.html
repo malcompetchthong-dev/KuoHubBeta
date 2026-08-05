@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Luau Code Encoder / Decoder</title>
+<title>KuoHub-Obfuscate</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -39,6 +39,7 @@
     font-weight: bold;
     cursor: pointer;
     font-size: 14px;
+    transition: all 0.2s;
   }
   .btn-active {
     background: #89b4fa;
@@ -47,6 +48,9 @@
   .btn-inactive {
     background: #45475a;
     color: #cdd6f4;
+  }
+  .btn-inactive:hover {
+    background: #585b70;
   }
   .grid {
     display: grid;
@@ -61,22 +65,41 @@
   }
   .lbl-in { color: #a6e3a1; }
   .lbl-out { color: #f38ba8; }
-  textarea {
+  .editor-wrapper {
+    position: relative;
+  }
+  .editor-container {
     width: 100%;
     height: 320px;
     background: #313244;
-    color: #cdd6f4;
     border: 1px solid #45475a;
     border-radius: 8px;
-    padding: 12px;
-    font-family: 'Fira Code', 'Consolas', monospace;
-    font-size: 13px;
-    resize: vertical;
-    outline: none;
-    line-height: 1.5;
+    overflow: hidden;
   }
-  #outputCode {
-    background: #181825;
+  .loading-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #1e1e2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #89b4fa;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #45475a;
+    border-top-color: #89b4fa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
   .action-btns {
     margin-top: 15px;
@@ -92,6 +115,14 @@
     font-weight: bold;
     cursor: pointer;
     font-size: 14px;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  .action-btns button:active {
+    transform: scale(0.96);
+  }
+  .action-btns button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   .btn-process { background: #a6e3a1; color: #1e1e2e; }
   .btn-copy { background: #f9e2af; color: #1e1e2e; }
@@ -103,24 +134,56 @@
     color: #6c7086;
     min-height: 20px;
   }
+  .warn-box {
+    margin-top: 15px;
+    padding: 12px;
+    background: #181825;
+    border-radius: 8px;
+    border-left: 4px solid #f38ba8;
+  }
+  .warn-box h4 {
+    margin: 0 0 6px 0;
+    color: #f38ba8;
+    font-size: 13px;
+  }
+  .warn-box p {
+    margin: 0;
+    font-size: 12px;
+    color: #bac2de;
+    line-height: 1.6;
+  }
+  .warn-box code {
+    background: #313244;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+  }
   .info-box {
-    margin-top: 20px;
-    padding: 15px;
+    margin-top: 15px;
+    padding: 12px;
     background: #181825;
     border-radius: 8px;
     border-left: 4px solid #89b4fa;
   }
   .info-box h4 {
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
     color: #89b4fa;
-    font-size: 14px;
+    font-size: 13px;
   }
   .info-box ul {
     margin: 0;
     padding-left: 18px;
-    font-size: 13px;
+    font-size: 12px;
     color: #bac2de;
-    line-height: 1.8;
+    line-height: 1.7;
+  }
+  .info-box code {
+    background: #313244;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
   }
   @media (max-width: 700px) {
     .grid { grid-template-columns: 1fr; }
@@ -129,7 +192,7 @@
 </head>
 <body>
 <div class="container">
-  <h2>🔐 Luau Code Encoder / Decoder</h2>
+  <h2>KuoHub-Obfuscate</h2>
 
   <div class="mode-btns">
     <button id="btnEncode" onclick="setMode('encode')">🔒 Encode</button>
@@ -139,34 +202,56 @@
   <div class="grid">
     <div>
       <label id="lblInput" class="lbl-in">📥 Input (Luau Code)</label>
-      <textarea id="inputCode" placeholder="-- วางโค้ด Luau ที่นี่..."></textarea>
+      <div class="editor-wrapper">
+        <div id="inputCode" class="editor-container"></div>
+        <div id="inputLoading" class="loading-overlay">
+          <div class="spinner"></div>
+          <span>กำลังโหลด Monaco Editor...</span>
+        </div>
+      </div>
     </div>
     <div>
       <label id="lblOutput" class="lbl-out">📤 Output (Encoded)</label>
-      <textarea id="outputCode" readonly placeholder="ผลลัพธ์จะปรากฏที่นี่..."></textarea>
+      <div class="editor-wrapper">
+        <div id="outputCode" class="editor-container"></div>
+        <div id="outputLoading" class="loading-overlay">
+          <div class="spinner"></div>
+          <span>กำลังโหลด Monaco Editor...</span>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="action-btns">
-    <button class="btn-process" onclick="processCode()">⚡ ประมวลผล</button>
-    <button class="btn-copy" onclick="copyOutput()">📋 คัดลอกผลลัพธ์</button>
-    <button class="btn-clear" onclick="clearAll()">🗑️ ล้างทั้งหมด</button>
+    <button class="btn-process" id="btnProcess" onclick="processCode()" disabled>⚡ Obfuscate</button>
+    <button class="btn-copy" id="btnCopy" onclick="copyOutput()" disabled>📋 คัดลอกผลลัพธ์</button>
+    <button class="btn-clear" id="btnClear" onclick="clearAll()" disabled>🗑️ ล้างทั้งหมด</button>
   </div>
 
-  <div id="statusMsg"></div>
+  <div id="statusMsg">⏳ รอ Monaco Editor โหลด...</div>
+
+  <div class="warn-box">
+    <h4>⚠️ การเข้ารหัสอาจทำให้โค้ดอ่านยากขึ้น</h4>
+    <p>
+    </p>
+  </div>
 
   <div class="info-box">
     <h4>ℹ️ วิธีใช้งาน</h4>
     <ul>
-      <li><b>Encode:</b> แปลงโค้ด Luau เป็น byte array ที่รองรับภาษาไทยและ Unicode ทั้งหมด</li>
-      <li><b>Decode:</b> แปลง byte array กลับมาเป็นโค้ดต้นฉบับ</li>
+      <li><b>Encode:</b> แปลงโค้ด Luau เป็น <code>\xHH</code> (hex escape) ใน string literal</li>
+      <li><b>Decode:</b> ถอดรหัสจาก <code>\xHH</code> กลับเป็นโค้ดต้นฉบับ</li>
       <li>รองรับ emoji, ภาษาไทย, ภาษาจีน และอักขระพิเศษทุกชนิด</li>
+      <li>ใช้ <b>Monaco Editor</b> (VS Code Engine) สำหรับไฮไลต์ Syntax Luau</li>
     </ul>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
 <script>
   let currentMode = 'encode';
+  let inputEditor, outputEditor;
+  let editorsReady = false;
 
   function setMode(mode) {
     currentMode = mode;
@@ -180,11 +265,15 @@
       btnDecode.className = 'btn-inactive';
       lblInput.textContent = '📥 Input (Luau Code)';
       lblOutput.textContent = '📤 Output (Encoded)';
+      if (inputEditor) monaco.editor.setModelLanguage(inputEditor.getModel(), 'lua');
+      if (outputEditor) monaco.editor.setModelLanguage(outputEditor.getModel(), 'lua');
     } else {
       btnDecode.className = 'btn-active';
       btnEncode.className = 'btn-inactive';
       lblInput.textContent = '📥 Input (Encoded Code)';
       lblOutput.textContent = '📤 Output (Decoded Luau)';
+      if (inputEditor) monaco.editor.setModelLanguage(inputEditor.getModel(), 'plaintext');
+      if (outputEditor) monaco.editor.setModelLanguage(outputEditor.getModel(), 'lua');
     }
     showStatus('โหมด: ' + (mode === 'encode' ? 'เข้ารหัส' : 'ถอดรหัส'), '#89b4fa');
   }
@@ -196,30 +285,36 @@
   }
 
   function luauEncode(code) {
-    const bytes = [];
-    const encoder = new TextEncoder();
-    const arr = encoder.encode(code);
-    for (let i = 0; i < arr.length; i++) {
-      bytes.push(arr[i]);
+    const bytes = Array.from(new TextEncoder().encode(code));
+    let hex = '';
+    for (const b of bytes) {
+      hex += '\\x' + b.toString(16).padStart(2, '0');
     }
-    const byteStr = bytes.join(',');
-    return `local b={${byteStr}};local s="";for i=1,#b do s=s..string.char(b[i])end;loadstring(s)()`;
+    return 'loadstring("' + hex + '")()';
   }
 
   function luauDecode(code) {
-    const byteMatch = code.match(/\{([\d,\s]+)\}/);
-    if (byteMatch) {
-      const bytes = byteMatch[1].split(',').map(b => parseInt(b.trim()));
-      const arr = new Uint8Array(bytes);
-      return new TextDecoder().decode(arr);
+    const match = code.match(/"((?:\\x[0-9a-fA-F]{2})+)"/);
+    if (match) {
+      const esc = match[1];
+      const bytes = [];
+      const regex = /\\x([0-9a-fA-F]{2})/g;
+      let m;
+      while ((m = regex.exec(esc)) !== null) {
+        bytes.push(parseInt(m[1], 16));
+      }
+      return new TextDecoder().decode(new Uint8Array(bytes));
     }
     return '// ไม่พบรูปแบบที่รองรับสำหรับการถอดรหัส';
   }
 
   function processCode() {
-    const input = document.getElementById('inputCode').value;
-    const output = document.getElementById('outputCode');
+    if (!editorsReady) {
+      showStatus('⏳ รอ Editor โหลดเสร็จสิ้นก่อน', '#f9e2af');
+      return;
+    }
 
+    const input = inputEditor.getValue();
     if (!input.trim()) {
       showStatus('⚠️ กรุณาใส่โค้ดก่อน', '#f38ba8');
       return;
@@ -228,37 +323,131 @@
     try {
       if (currentMode === 'encode') {
         const result = luauEncode(input);
-        output.value = result;
+        outputEditor.setValue(result);
         showStatus('✅ เข้ารหัสสำเร็จ! ขนาด: ' + input.length + ' → ' + result.length + ' ตัวอักษร', '#a6e3a1');
       } else {
         const result = luauDecode(input);
-        output.value = result;
+        outputEditor.setValue(result);
         showStatus('✅ ถอดรหัสสำเร็จ!', '#a6e3a1');
       }
     } catch (e) {
-      output.value = '// Error: ' + e.message;
+      outputEditor.setValue('// Error: ' + e.message);
       showStatus('❌ เกิดข้อผิดพลาด: ' + e.message, '#f38ba8');
     }
   }
 
-  function copyOutput() {
-    const output = document.getElementById('outputCode');
-    if (!output.value) {
+  async function copyOutput() {
+    if (!editorsReady) return;
+    const output = outputEditor.getValue();
+    if (!output) {
       showStatus('⚠️ ไม่มีข้อความให้คัดลอก', '#f38ba8');
       return;
     }
-    output.select();
-    document.execCommand('copy');
-    showStatus('📋 คัดลอกไปยังคลิปบอร์ดแล้ว!', '#f9e2af');
+    try {
+      await navigator.clipboard.writeText(output);
+      showStatus('📋 คัดลอกไปยังคลิปบอร์ดแล้ว!', '#f9e2af');
+    } catch (err) {
+      showStatus('📋 คัดลอกแล้ว (fallback)!', '#f9e2af');
+    }
   }
 
   function clearAll() {
-    document.getElementById('inputCode').value = '';
-    document.getElementById('outputCode').value = '';
+    if (!editorsReady) return;
+    inputEditor.setValue('');
+    outputEditor.setValue('');
     showStatus('🗑️ ล้างข้อมูลทั้งหมดแล้ว', '#6c7086');
   }
+
+  // Monaco Editor Setup
+  require.config({
+    paths: {
+      'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs'
+    }
+  });
+
+  require(['vs/editor/editor.main'], function() {
+    // Define Catppuccin Mocha theme
+    monaco.editor.defineTheme('catppuccinMocha', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '6C7086', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'CBA6F7' },
+        { token: 'string', foreground: 'A6E3A1' },
+        { token: 'number', foreground: 'FAB387' },
+        { token: 'identifier', foreground: 'CDD6F4' },
+        { token: 'function', foreground: '89B4FA' },
+        { token: 'type', foreground: 'F9E2AF' },
+        { token: 'operator', foreground: '89DCEB' },
+        { token: 'delimiter', foreground: '9399B2' },
+        { token: 'tag', foreground: 'F38BA8' },
+        { token: 'attribute.name', foreground: 'F9E2AF' },
+        { token: 'attribute.value', foreground: 'A6E3A1' },
+      ],
+      colors: {
+        'editor.background': '#1E1E2E',
+        'editor.foreground': '#CDD6F4',
+        'editorLineNumber.foreground': '#6C7086',
+        'editorLineNumber.activeForeground': '#89B4FA',
+        'editor.selectionBackground': '#353749',
+        'editor.inactiveSelectionBackground': '#313244',
+        'editor.lineHighlightBackground': '#2A2A3E',
+        'editorCursor.foreground': '#F5E0DC',
+        'editor.findMatchBackground': '#89B4FA44',
+        'editor.findMatchHighlightBackground': '#89B4FA22',
+        'editorBracketMatch.background': '#89B4FA33',
+        'editorBracketMatch.border': '#89B4FA',
+      }
+    });
+
+    const commonOptions = {
+      theme: 'catppuccinMocha',
+      fontSize: 13,
+      fontFamily: "'Fira Code', 'JetBrains Mono', 'Consolas', monospace",
+      fontLigatures: true,
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      automaticLayout: true,
+      padding: { top: 12 },
+      lineNumbers: 'on',
+      roundedSelection: false,
+      renderLineHighlight: 'line',
+      matchBrackets: 'always',
+      tabSize: 2,
+      insertSpaces: true,
+      quickSuggestions: false,
+      suggestOnTriggerCharacters: false,
+      wordBasedSuggestions: false,
+      parameterHints: { enabled: false },
+      hover: { enabled: false },
+      contextmenu: true,
+      folding: true,
+      renderWhitespace: 'none',
+    };
+
+    inputEditor = monaco.editor.create(document.getElementById('inputCode'), {
+      ...commonOptions,
+      value: '',
+      language: 'lua',
+    });
+
+    outputEditor = monaco.editor.create(document.getElementById('outputCode'), {
+      ...commonOptions,
+      value: '',
+      language: 'lua',
+      readOnly: true,
+    });
+
+    document.getElementById('inputLoading').style.display = 'none';
+    document.getElementById('outputLoading').style.display = 'none';
+    document.getElementById('btnProcess').disabled = false;
+    document.getElementById('btnCopy').disabled = false;
+    document.getElementById('btnClear').disabled = false;
+    editorsReady = true;
+    showStatus('✅ Monaco Editor พร้อมใช้งาน — วางโค้ด Luau แล้วกดประมวลผล', '#a6e3a1');
+  });
 
   setMode('encode');
 </script>
 </body>
-        </html>
+</html>
