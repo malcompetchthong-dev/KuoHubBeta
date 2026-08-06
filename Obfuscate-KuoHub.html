@@ -3,196 +3,372 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KuoHub-Obfuscate</title>
+<title>KuoHub-Obfuscate · Premium</title>
 <style>
-  * { box-sizing: border-box; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gh-bg: #0d1117;
+    --gh-surface: #161b22;
+    --gh-elevated: #21262d;
+    --gh-border: #30363d;
+    --gh-text: #c9d1d9;
+    --gh-text-secondary: #8b949e;
+    --gh-accent: #58a6ff;
+    --gh-accent-glow: rgba(88, 166, 255, 0.15);
+    --gh-success: #3fb950;
+    --gh-warning: #d29922;
+    --gh-danger: #f85149;
+    --gh-purple: #a371f7;
+    --gh-keyword: #ff7b72;
+    --gh-string: #a5d6ff;
+    --gh-number: #79c0ff;
+    --gh-function: #d2a8ff;
+    --gh-comment: #8b949e;
+    --gh-operator: #ff7b72;
+    --gh-type: #ffa657;
+  }
+
   body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #1e1e2e;
-    color: #cdd6f4;
-    margin: 0;
-    padding: 20px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--gh-bg);
+    color: var(--gh-text);
     min-height: 100vh;
+    overflow-x: hidden;
   }
+
+  /* Animated gradient mesh background */
+  .bg-mesh {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(88, 166, 255, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(163, 113, 247, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(255, 123, 114, 0.04) 0%, transparent 60%);
+    animation: meshMove 20s ease-in-out infinite alternate;
+  }
+  @keyframes meshMove {
+    0% { transform: scale(1) rotate(0deg); }
+    100% { transform: scale(1.1) rotate(2deg); }
+  }
+
   .container {
-    max-width: 900px;
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
     margin: 0 auto;
-    padding: 20px;
-    background: #1e1e2e;
-    border-radius: 12px;
+    padding: 40px 24px;
   }
-  h2 {
+
+  /* Header */
+  .header {
     text-align: center;
-    color: #89b4fa;
-    margin-bottom: 20px;
+    margin-bottom: 40px;
+    padding: 20px 0;
   }
+  .header h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #58a6ff, #a371f7, #ff7b72);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: var(--gh-text-secondary);
+    font-size: 0.95rem;
+    font-weight: 400;
+  }
+  .header .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 4px 12px;
+    background: var(--gh-elevated);
+    border: 1px solid var(--gh-border);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gh-accent);
+    letter-spacing: 0.03em;
+  }
+
+  /* Mode buttons */
   .mode-btns {
     display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 8px;
+    margin-bottom: 24px;
     justify-content: center;
   }
   .mode-btns button {
-    padding: 10px 24px;
-    border: none;
+    padding: 10px 28px;
+    border: 1px solid var(--gh-border);
     border-radius: 8px;
-    font-weight: bold;
+    font-weight: 600;
     cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: var(--gh-surface);
+    color: var(--gh-text-secondary);
+    font-family: 'Inter', sans-serif;
+  }
+  .mode-btns button:hover {
+    border-color: var(--gh-accent);
+    color: var(--gh-text);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
   .btn-active {
-    background: #89b4fa;
-    color: #1e1e2e;
+    background: linear-gradient(135deg, var(--gh-accent), var(--gh-purple)) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 16px var(--gh-accent-glow) !important;
   }
-  .btn-inactive {
-    background: #45475a;
-    color: #cdd6f4;
-  }
-  .btn-inactive:hover {
-    background: #585b70;
-  }
+
+  /* Editor grid */
   .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    gap: 20px;
   }
-  label {
+
+  .editor-card {
+    background: var(--gh-surface);
+    border: 1px solid var(--gh-border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .editor-card:hover {
+    border-color: var(--gh-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--gh-elevated);
+    border-bottom: 1px solid var(--gh-border);
+  }
+  .editor-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .editor-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .editor-dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
     display: block;
-    margin-bottom: 6px;
-    font-size: 13px;
-    font-weight: 600;
   }
-  .lbl-in { color: #a6e3a1; }
-  .lbl-out { color: #f38ba8; }
+  .dot-red { background: #ff5f56; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green { background: #27c93f; }
+  .editor-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gh-text-secondary);
+    letter-spacing: 0.02em;
+  }
+  .editor-lang {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    background: var(--gh-bg);
+    border-radius: 4px;
+    color: var(--gh-text-secondary);
+    font-weight: 500;
+  }
+
   .editor-wrapper {
     position: relative;
+    height: 380px;
   }
   .editor-container {
     width: 100%;
-    height: 320px;
-    background: #313244;
-    border: 1px solid #45475a;
-    border-radius: 8px;
-    overflow: hidden;
+    height: 100%;
+    background: var(--gh-bg);
   }
   .loading-overlay {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: #1e1e2e;
+    inset: 0;
+    background: var(--gh-bg);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10;
-    border-radius: 8px;
-    font-size: 13px;
-    color: #89b4fa;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: var(--gh-text-secondary);
   }
   .spinner {
-    width: 24px;
-    height: 24px;
-    border: 2px solid #45475a;
-    border-top-color: #89b4fa;
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--gh-elevated);
+    border-top-color: var(--gh-accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Action buttons */
   .action-btns {
-    margin-top: 15px;
+    margin-top: 24px;
     display: flex;
-    gap: 10px;
+    gap: 12px;
     justify-content: center;
     flex-wrap: wrap;
   }
   .action-btns button {
-    padding: 10px 28px;
+    padding: 12px 32px;
     border: none;
     border-radius: 8px;
-    font-weight: bold;
+    font-weight: 600;
     cursor: pointer;
-    font-size: 14px;
-    transition: transform 0.1s, opacity 0.2s;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.01em;
   }
-  .action-btns button:active {
-    transform: scale(0.96);
-  }
+  .action-btns button:active { transform: scale(0.97); }
   .action-btns button:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
+    transform: none !important;
   }
-  .btn-process { background: #a6e3a1; color: #1e1e2e; }
-  .btn-copy { background: #f9e2af; color: #1e1e2e; }
-  .btn-clear { background: #f38ba8; color: #1e1e2e; }
+  .btn-process {
+    background: linear-gradient(135deg, var(--gh-success), #2ea043);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(63, 185, 80, 0.2);
+  }
+  .btn-process:hover:not(:disabled) {
+    box-shadow: 0 6px 24px rgba(63, 185, 80, 0.3);
+    transform: translateY(-1px);
+  }
+  .btn-copy {
+    background: linear-gradient(135deg, var(--gh-accent), #1f6feb);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(88, 166, 255, 0.2);
+  }
+  .btn-copy:hover:not(:disabled) {
+    box-shadow: 0 6px 24px rgba(88, 166, 255, 0.3);
+    transform: translateY(-1px);
+  }
+  .btn-clear {
+    background: var(--gh-elevated);
+    color: var(--gh-danger);
+    border: 1px solid var(--gh-border);
+  }
+  .btn-clear:hover:not(:disabled) {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: var(--gh-danger);
+    transform: translateY(-1px);
+  }
+
   #statusMsg {
     text-align: center;
-    margin-top: 12px;
-    font-size: 13px;
-    color: #6c7086;
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: var(--gh-text-secondary);
     min-height: 20px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
   }
-  .warn-box {
-    margin-top: 15px;
-    padding: 12px;
-    background: #181825;
-    border-radius: 8px;
-    border-left: 4px solid #f38ba8;
+
+  /* Info cards */
+  .cards-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 24px;
   }
-  .warn-box h4 {
-    margin: 0 0 6px 0;
-    color: #f38ba8;
-    font-size: 13px;
+  .info-card {
+    padding: 18px;
+    background: var(--gh-surface);
+    border: 1px solid var(--gh-border);
+    border-radius: 12px;
+    transition: border-color 0.2s;
   }
-  .warn-box p {
+  .info-card:hover {
+    border-color: var(--gh-border);
+  }
+  .info-card h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .info-card p, .info-card ul {
     margin: 0;
-    font-size: 12px;
-    color: #bac2de;
-    line-height: 1.6;
-  }
-  .warn-box code {
-    background: #313244;
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-family: 'Fira Code', monospace;
-    font-size: 11px;
-  }
-  .info-box {
-    margin-top: 15px;
-    padding: 12px;
-    background: #181825;
-    border-radius: 8px;
-    border-left: 4px solid #89b4fa;
-  }
-  .info-box h4 {
-    margin: 0 0 6px 0;
-    color: #89b4fa;
-    font-size: 13px;
-  }
-  .info-box ul {
-    margin: 0;
-    padding-left: 18px;
-    font-size: 12px;
-    color: #bac2de;
+    font-size: 0.8rem;
+    color: var(--gh-text-secondary);
     line-height: 1.7;
   }
-  .info-box code {
-    background: #313244;
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-family: 'Fira Code', monospace;
-    font-size: 11px;
+  .info-card ul {
+    padding-left: 18px;
   }
-  @media (max-width: 700px) {
+  .info-card li { margin-bottom: 4px; }
+  .info-card code {
+    background: var(--gh-elevated);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--gh-accent);
+    border: 1px solid var(--gh-border);
+  }
+  .card-warn h4 { color: var(--gh-danger); }
+  .card-warn { border-left: 3px solid var(--gh-danger); }
+  .card-info h4 { color: var(--gh-accent); }
+  .card-info { border-left: 3px solid var(--gh-accent); }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--gh-border);
+    color: var(--gh-text-secondary);
+    font-size: 0.75rem;
+  }
+
+  @media (max-width: 800px) {
     .grid { grid-template-columns: 1fr; }
+    .cards-row { grid-template-columns: 1fr; }
+    .header h1 { font-size: 1.8rem; }
   }
 </style>
 </head>
 <body>
+<div class="bg-mesh"></div>
 <div class="container">
-  <h2>KuoHub-Obfuscate</h2>
+  <div class="header">
+    <h1>KuoHub-Obfuscate</h1>
+    <p>เข้ารหัส / ถอดรหัสโค้ด Luau ด้วย Decimal Escape Sequence</p>
+    <div class="badge">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub-Style | ITKuo
+    </div>
+  </div>
 
   <div class="mode-btns">
     <button id="btnEncode" onclick="setMode('encode')">🔒 Encode</button>
@@ -200,8 +376,18 @@
   </div>
 
   <div class="grid">
-    <div>
-      <label id="lblInput" class="lbl-in">📥 Input (Luau Code)</label>
+    <div class="editor-card">
+      <div class="editor-header">
+        <div class="editor-header-left">
+          <div class="editor-dots">
+            <span class="dot-red"></span>
+            <span class="dot-yellow"></span>
+            <span class="dot-green"></span>
+          </div>
+          <span class="editor-title" id="lblInput">📥 Input (Luau Code)</span>
+        </div>
+        <span class="editor-lang" id="langInput">lua</span>
+      </div>
       <div class="editor-wrapper">
         <div id="inputCode" class="editor-container"></div>
         <div id="inputLoading" class="loading-overlay">
@@ -210,8 +396,19 @@
         </div>
       </div>
     </div>
-    <div>
-      <label id="lblOutput" class="lbl-out">📤 Output (Encoded)</label>
+
+    <div class="editor-card">
+      <div class="editor-header">
+        <div class="editor-header-left">
+          <div class="editor-dots">
+            <span class="dot-red"></span>
+            <span class="dot-yellow"></span>
+            <span class="dot-green"></span>
+          </div>
+          <span class="editor-title" id="lblOutput">📤 Output (Encoded)</span>
+        </div>
+        <span class="editor-lang" id="langOutput">lua</span>
+      </div>
       <div class="editor-wrapper">
         <div id="outputCode" class="editor-container"></div>
         <div id="outputLoading" class="loading-overlay">
@@ -228,22 +425,30 @@
     <button class="btn-clear" id="btnClear" onclick="clearAll()" disabled>🗑️ ล้างทั้งหมด</button>
   </div>
 
-  <div id="statusMsg">⏳ รอ Monaco Editor โหลด...</div>
+  <div id="statusMsg">⏳ รอ Monaco Editor โหลดเสร็จสิ้น...</div>
 
-  <div class="warn-box">
-    <h4>⚠️ การเข้ารหัสอาจทำให้โค้ดอ่านยากขึ้น</h4>
-    <p>
-    </p>
+  <div class="cards-row">
+    <div class="info-card card-warn">
+      <h4>⚠️ คำเตือน</h4>
+      <p>
+        หากรันใน <b>Roblox</b> แล้วเจอ error <code>attempt to call a nil value</code> 
+        แสดงว่า <code>loadstring</code> ถูกปิดใช้งานอยู่ ให้ไปเปิดที่ 
+        <b>Game Settings → Security → LoadStringEnabled</b>
+      </p>
+    </div>
+    <div class="info-card card-info">
+      <h4>ℹ️ วิธีใช้งาน</h4>
+      <ul>
+        <li><b>Encode:</b> แปลงโค้ด Luau เป็น <code>\ddd</code> (decimal escape) ใน string literal</li>
+        <li><b>Decode:</b> ถอดรหัสจาก <code>\ddd</code> กลับเป็นโค้ดต้นฉบับ</li>
+        <li>รองรับ emoji, ภาษาไทย, ภาษาจีน และอักขระพิเศษทุกชนิด</li>
+        <li>ใช้ <b>Monaco Editor</b> (VS Code Engine) สำหรับไฮไลต์ Syntax แบบ GitHub Dark</li>
+      </ul>
+    </div>
   </div>
 
-  <div class="info-box">
-    <h4>ℹ️ วิธีใช้งาน</h4>
-    <ul>
-      <li><b>Encode:</b> แปลงโค้ด Luau เป็น <code>\xHH</code> (hex escape) ใน string literal</li>
-      <li><b>Decode:</b> ถอดรหัสจาก <code>\xHH</code> กลับเป็นโค้ดต้นฉบับ</li>
-      <li>รองรับ emoji, ภาษาไทย, ภาษาจีน และอักขระพิเศษทุกชนิด</li>
-      <li>ใช้ <b>Monaco Editor</b> (VS Code Engine) สำหรับไฮไลต์ Syntax Luau</li>
-    </ul>
+  <div class="footer">
+    KuoHub-Obfuscate · Premium Edition · ธีมอ้างอิงจาก GitHub Dark
   </div>
 </div>
 
@@ -259,49 +464,55 @@
     const btnDecode = document.getElementById('btnDecode');
     const lblInput = document.getElementById('lblInput');
     const lblOutput = document.getElementById('lblOutput');
+    const langInput = document.getElementById('langInput');
+    const langOutput = document.getElementById('langOutput');
 
     if (mode === 'encode') {
       btnEncode.className = 'btn-active';
-      btnDecode.className = 'btn-inactive';
+      btnDecode.className = '';
       lblInput.textContent = '📥 Input (Luau Code)';
       lblOutput.textContent = '📤 Output (Encoded)';
+      langInput.textContent = 'lua';
+      langOutput.textContent = 'lua';
       if (inputEditor) monaco.editor.setModelLanguage(inputEditor.getModel(), 'lua');
       if (outputEditor) monaco.editor.setModelLanguage(outputEditor.getModel(), 'lua');
     } else {
       btnDecode.className = 'btn-active';
-      btnEncode.className = 'btn-inactive';
+      btnEncode.className = '';
       lblInput.textContent = '📥 Input (Encoded Code)';
       lblOutput.textContent = '📤 Output (Decoded Luau)';
+      langInput.textContent = 'plaintext';
+      langOutput.textContent = 'lua';
       if (inputEditor) monaco.editor.setModelLanguage(inputEditor.getModel(), 'plaintext');
       if (outputEditor) monaco.editor.setModelLanguage(outputEditor.getModel(), 'lua');
     }
-    showStatus('โหมด: ' + (mode === 'encode' ? 'เข้ารหัส' : 'ถอดรหัส'), '#89b4fa');
+    showStatus('โหมด: ' + (mode === 'encode' ? 'เข้ารหัส' : 'ถอดรหัส'), '#58a6ff');
   }
 
   function showStatus(msg, color) {
     const el = document.getElementById('statusMsg');
     el.textContent = msg;
-    el.style.color = color || '#6c7086';
+    el.style.color = color || '#8b949e';
   }
 
   function luauEncode(code) {
     const bytes = Array.from(new TextEncoder().encode(code));
-    let hex = '';
+    let dec = '';
     for (const b of bytes) {
-      hex += '\\x' + b.toString(16).padStart(2, '0');
+      dec += '\\' + b.toString(10).padStart(3, '0');
     }
-    return 'loadstring("' + hex + '")()';
+    return 'loadstring("' + dec + '")()';
   }
 
   function luauDecode(code) {
-    const match = code.match(/"((?:\\x[0-9a-fA-F]{2})+)"/);
+    const match = code.match(/"((?:\\[0-9]{1,3})+)"/);
     if (match) {
       const esc = match[1];
       const bytes = [];
-      const regex = /\\x([0-9a-fA-F]{2})/g;
+      const regex = /\\([0-9]{1,3})/g;
       let m;
       while ((m = regex.exec(esc)) !== null) {
-        bytes.push(parseInt(m[1], 16));
+        bytes.push(parseInt(m[1], 10));
       }
       return new TextDecoder().decode(new Uint8Array(bytes));
     }
@@ -310,29 +521,27 @@
 
   function processCode() {
     if (!editorsReady) {
-      showStatus('⏳ รอ Editor โหลดเสร็จสิ้นก่อน', '#f9e2af');
+      showStatus('⏳ รอ Editor โหลดเสร็จสิ้นก่อน', '#d29922');
       return;
     }
-
     const input = inputEditor.getValue();
     if (!input.trim()) {
-      showStatus('⚠️ กรุณาใส่โค้ดก่อน', '#f38ba8');
+      showStatus('⚠️ กรุณาใส่โค้ดก่อน', '#f85149');
       return;
     }
-
     try {
       if (currentMode === 'encode') {
         const result = luauEncode(input);
         outputEditor.setValue(result);
-        showStatus('✅ เข้ารหัสสำเร็จ! ขนาด: ' + input.length + ' → ' + result.length + ' ตัวอักษร', '#a6e3a1');
+        showStatus('✅ เข้ารหัสสำเร็จ! ขนาด: ' + input.length + ' → ' + result.length + ' ตัวอักษร', '#3fb950');
       } else {
         const result = luauDecode(input);
         outputEditor.setValue(result);
-        showStatus('✅ ถอดรหัสสำเร็จ!', '#a6e3a1');
+        showStatus('✅ ถอดรหัสสำเร็จ!', '#3fb950');
       }
     } catch (e) {
       outputEditor.setValue('// Error: ' + e.message);
-      showStatus('❌ เกิดข้อผิดพลาด: ' + e.message, '#f38ba8');
+      showStatus('❌ เกิดข้อผิดพลาด: ' + e.message, '#f85149');
     }
   }
 
@@ -340,14 +549,14 @@
     if (!editorsReady) return;
     const output = outputEditor.getValue();
     if (!output) {
-      showStatus('⚠️ ไม่มีข้อความให้คัดลอก', '#f38ba8');
+      showStatus('⚠️ ไม่มีข้อความให้คัดลอก', '#f85149');
       return;
     }
     try {
       await navigator.clipboard.writeText(output);
-      showStatus('📋 คัดลอกไปยังคลิปบอร์ดแล้ว!', '#f9e2af');
+      showStatus('📋 คัดลอกไปยังคลิปบอร์ดแล้ว!', '#d29922');
     } catch (err) {
-      showStatus('📋 คัดลอกแล้ว (fallback)!', '#f9e2af');
+      showStatus('📋 คัดลอกแล้ว (fallback)!', '#d29922');
     }
   }
 
@@ -355,7 +564,7 @@
     if (!editorsReady) return;
     inputEditor.setValue('');
     outputEditor.setValue('');
-    showStatus('🗑️ ล้างข้อมูลทั้งหมดแล้ว', '#6c7086');
+    showStatus('🗑️ ล้างข้อมูลทั้งหมดแล้ว', '#8b949e');
   }
 
   // Monaco Editor Setup
@@ -366,49 +575,94 @@
   });
 
   require(['vs/editor/editor.main'], function() {
-    // Define Catppuccin Mocha theme
-    monaco.editor.defineTheme('catppuccinMocha', {
+    // Define GitHub Dark theme for Lua
+    monaco.editor.defineTheme('githubDark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: 'comment', foreground: '6C7086', fontStyle: 'italic' },
-        { token: 'keyword', foreground: 'CBA6F7' },
-        { token: 'string', foreground: 'A6E3A1' },
-        { token: 'number', foreground: 'FAB387' },
-        { token: 'identifier', foreground: 'CDD6F4' },
-        { token: 'function', foreground: '89B4FA' },
-        { token: 'type', foreground: 'F9E2AF' },
-        { token: 'operator', foreground: '89DCEB' },
-        { token: 'delimiter', foreground: '9399B2' },
-        { token: 'tag', foreground: 'F38BA8' },
-        { token: 'attribute.name', foreground: 'F9E2AF' },
-        { token: 'attribute.value', foreground: 'A6E3A1' },
+        // Comments
+        { token: 'comment', foreground: '8B949E', fontStyle: 'italic' },
+        { token: 'comment.block', foreground: '8B949E', fontStyle: 'italic' },
+        // Keywords (function, local, if, then, else, end, return, while, do, for, in, repeat, until, not, and, or)
+        { token: 'keyword', foreground: 'FF7B72', fontStyle: 'bold' },
+        { token: 'keyword.local', foreground: 'FF7B72', fontStyle: 'bold' },
+        { token: 'keyword.function', foreground: 'FF7B72', fontStyle: 'bold' },
+        { token: 'keyword.return', foreground: 'FF7B72', fontStyle: 'bold' },
+        { token: 'keyword.control', foreground: 'FF7B72', fontStyle: 'bold' },
+        // Strings
+        { token: 'string', foreground: 'A5D6FF' },
+        { token: 'string.escape', foreground: '79C0FF' },
+        { token: 'string.lua', foreground: 'A5D6FF' },
+        // Numbers
+        { token: 'number', foreground: '79C0FF' },
+        { token: 'number.hex', foreground: '79C0FF' },
+        // Functions / Methods
+        { token: 'function', foreground: 'D2A8FF' },
+        { token: 'function.call', foreground: 'D2A8FF' },
+        { token: 'method', foreground: 'D2A8FF' },
+        { token: 'member', foreground: 'D2A8FF' },
+        // Identifiers / Variables
+        { token: 'identifier', foreground: 'C9D1D9' },
+        { token: 'variable', foreground: 'C9D1D9' },
+        { token: 'variable.predefined', foreground: 'FFA657' },
+        { token: 'variable.other', foreground: 'C9D1D9' },
+        // Operators
+        { token: 'operator', foreground: 'FF7B72' },
+        { token: 'operator.lua', foreground: 'FF7B72' },
+        // Types / Built-in
+        { token: 'type', foreground: 'FFA657' },
+        { token: 'type.builtin', foreground: 'FFA657' },
+        { token: 'constant', foreground: '79C0FF' },
+        { token: 'constant.language', foreground: '79C0FF' },
+        // Delimiters
+        { token: 'delimiter', foreground: 'C9D1D9' },
+        { token: 'delimiter.bracket', foreground: 'C9D1D9' },
+        { token: 'delimiter.parenthesis', foreground: 'C9D1D9' },
+        // Tags (for other langs)
+        { token: 'tag', foreground: '7EE787' },
+        { token: 'attribute.name', foreground: 'D2A8FF' },
+        { token: 'attribute.value', foreground: 'A5D6FF' },
       ],
       colors: {
-        'editor.background': '#1E1E2E',
-        'editor.foreground': '#CDD6F4',
-        'editorLineNumber.foreground': '#6C7086',
-        'editorLineNumber.activeForeground': '#89B4FA',
-        'editor.selectionBackground': '#353749',
-        'editor.inactiveSelectionBackground': '#313244',
-        'editor.lineHighlightBackground': '#2A2A3E',
-        'editorCursor.foreground': '#F5E0DC',
-        'editor.findMatchBackground': '#89B4FA44',
-        'editor.findMatchHighlightBackground': '#89B4FA22',
-        'editorBracketMatch.background': '#89B4FA33',
-        'editorBracketMatch.border': '#89B4FA',
+        'editor.background': '#0D1117',
+        'editor.foreground': '#C9D1D9',
+        'editorLineNumber.foreground': '#484F58',
+        'editorLineNumber.activeForeground': '#C9D1D9',
+        'editor.selectionBackground': '#264F78',
+        'editor.selectionHighlightBackground': '#2C4F7C',
+        'editor.inactiveSelectionBackground': '#264F7855',
+        'editor.lineHighlightBackground': '#161B22',
+        'editorCursor.foreground': '#58A6FF',
+        'editor.findMatchBackground': '#9E6A03',
+        'editor.findMatchHighlightBackground': '#9E6A0355',
+        'editorBracketMatch.background': '#1F6FEB33',
+        'editorBracketMatch.border': '#58A6FF',
+        'editorIndentGuide.background': '#21262D',
+        'editorIndentGuide.activeBackground': '#30363D',
+        'editorWhitespace.foreground': '#484F58',
+        'editorOverviewRuler.border': '#30363D',
+        'editorGutter.background': '#0D1117',
+        'editorWidget.background': '#161B22',
+        'editorWidget.border': '#30363D',
+        'editorSuggestWidget.background': '#161B22',
+        'editorSuggestWidget.border': '#30363D',
+        'editorSuggestWidget.highlightForeground': '#58A6FF',
+        'editorSuggestWidget.selectedBackground': '#1F6FEB33',
+        'peekViewTitle.background': '#161B22',
+        'peekViewEditor.background': '#0D1117',
+        'peekViewResult.background': '#161B22',
       }
     });
 
     const commonOptions = {
-      theme: 'catppuccinMocha',
-      fontSize: 13,
-      fontFamily: "'Fira Code', 'JetBrains Mono', 'Consolas', monospace",
+      theme: 'githubDark',
+      fontSize: 13.5,
+      fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', 'SF Mono', monospace",
       fontLigatures: true,
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
       automaticLayout: true,
-      padding: { top: 12 },
+      padding: { top: 14, bottom: 14 },
       lineNumbers: 'on',
       roundedSelection: false,
       renderLineHighlight: 'line',
@@ -423,6 +677,10 @@
       contextmenu: true,
       folding: true,
       renderWhitespace: 'none',
+      smoothScrolling: true,
+      cursorBlinking: 'smooth',
+      cursorStyle: 'line',
+      cursorWidth: 2,
     };
 
     inputEditor = monaco.editor.create(document.getElementById('inputCode'), {
@@ -444,10 +702,10 @@
     document.getElementById('btnCopy').disabled = false;
     document.getElementById('btnClear').disabled = false;
     editorsReady = true;
-    showStatus('✅ Monaco Editor พร้อมใช้งาน — วางโค้ด Luau แล้วกดประมวลผล', '#a6e3a1');
+    showStatus('✅ พร้อมใช้งาน — วางโค้ด Luau แล้วกดประมวลผล', '#3fb950');
   });
 
   setMode('encode');
 </script>
 </body>
-</html>
+   </html>
