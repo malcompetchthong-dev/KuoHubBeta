@@ -1,7 +1,7 @@
 local KuoHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/malcompetchthong-dev/ITKuo/refs/heads/main/Librarykuohub-BETA.lua"))()
 
 local Window = KuoHub:MakeWindow({
-    Title = "Kuo Hub | MM2",
+    Title = "Kuo Hub | Mapall",
 })
 
 Window:AddMinimizeButton({
