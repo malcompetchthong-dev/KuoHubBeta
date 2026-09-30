@@ -17,6 +17,8 @@ local Home = Window:Tab("Home")
 local Combat = Window:MakeTab({"Combat","sword"})  
 
 local Info = Window:MakeTab({"System","history"})
+
+local Chat = Window:MakeTab({"KuoHub Ai","chat"})
   
 Home:Section("Main")  
   
@@ -60,6 +62,820 @@ local wasInvisibleBeforeWarp = false
 local SAFE_DISTANCE_GUN = 2  
 local GunESP = false  
 local Shot_AURA = false  
+
+--===================÷÷÷÷==
+--Chat ai
+--==============≈==========
+
+do
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local Lighting = game:GetService("Lighting")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- กันรันซ้ำ: ลบ UI เก่า
+pcall(function()
+	local old = CoreGui:FindFirstChild("KuoHubAI_UI")
+	if old then old:Destroy() end
+end)
+
+--=====================================================
+-- LANGUAGE DETECTOR
+--=====================================================
+local function isThai(s)
+	return s:match("[\u{0E00}-\u{0E7F}]") ~= nil
+end
+
+--=====================================================
+-- GAME NAME
+--=====================================================
+local CurrentGameName = "Roblox"
+pcall(function()
+	local info = MarketplaceService:GetProductInfo(game.PlaceId)
+	if info and info.Name then CurrentGameName = info.Name end
+end)
+
+--=====================================================
+-- INTRO SCREEN
+--=====================================================
+
+--=====================================================
+-- UI SETUP
+--=====================================================
+local KuoGui = CoreGui:FindFirstChild("KuoHub")
+local Page = KuoGui
+	and KuoGui:FindFirstChild("Main")
+	and KuoGui.Main:FindFirstChild("Pages")
+	and KuoGui.Main.Pages:FindFirstChild("KuoHub AiPage")
+
+if not Page then
+	warn("[Kuo Hub AI] ไม่พบแท็บ 'KuoHub Ai' — ต้องสร้าง Window:MakeTab({"KuoHub Ai","chat"}) ก่อนโมดูลนี้")
+	return
+end
+
+local OldContent = Page:FindFirstChild("KuoAI_Content")
+if OldContent then OldContent:Destroy() end
+
+local ContentFrame = Instance.new("Frame", Page)
+ContentFrame.Name = "KuoAI_Content"
+ContentFrame.Size = UDim2.new(1, 0, 1, 0)
+ContentFrame.BackgroundTransparency = 1
+
+local ChatBoxFrame = Instance.new("ScrollingFrame", ContentFrame)
+ChatBoxFrame.Size = UDim2.new(1, 0, 1, -42)
+ChatBoxFrame.BackgroundColor3 = Color3.fromRGB(22, 27, 34)
+ChatBoxFrame.BackgroundTransparency = 0.4
+ChatBoxFrame.BorderSizePixel = 0
+ChatBoxFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ChatBoxFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ChatBoxFrame.ScrollBarThickness = 3
+ChatBoxFrame.ScrollBarImageColor3 = Color3.fromRGB(60, 70, 80)
+Instance.new("UICorner", ChatBoxFrame).CornerRadius = UDim.new(0, 8)
+local ChatList = Instance.new("UIListLayout", ChatBoxFrame)
+ChatList.Padding = UDim.new(0, 5)
+local ChatPadding = Instance.new("UIPadding", ChatBoxFrame)
+ChatPadding.PaddingLeft = UDim.new(0, 8)
+ChatPadding.PaddingRight = UDim.new(0, 8)
+ChatPadding.PaddingTop = UDim.new(0, 8)
+
+local InputFrame = Instance.new("Frame", ContentFrame)
+InputFrame.Size = UDim2.new(1, -105, 0, 32)
+InputFrame.Position = UDim2.new(0, 0, 1, -32)
+InputFrame.BackgroundColor3 = Color3.fromRGB(22, 27, 34)
+Instance.new("UICorner", InputFrame).CornerRadius = UDim.new(0, 8)
+local InputStroke = Instance.new("UIStroke", InputFrame)
+InputStroke.Color = Color3.fromRGB(40, 46, 54)
+InputStroke.Transparency = 0.3
+
+local CommandInput = Instance.new("TextBox", InputFrame)
+CommandInput.Size = UDim2.new(1, -12, 1, 0)
+CommandInput.Position = UDim2.new(0, 6, 0, 0)
+CommandInput.BackgroundTransparency = 1
+CommandInput.Text = ""
+CommandInput.PlaceholderText = "พิมพ์ข้อความถึง Kuo Hub AI... / Type a message..."
+CommandInput.PlaceholderColor3 = Color3.fromRGB(139, 148, 158)
+CommandInput.TextColor3 = Color3.fromRGB(240, 240, 240)
+CommandInput.Font = Enum.Font.Gotham
+CommandInput.TextSize = 11
+CommandInput.TextXAlignment = Enum.TextXAlignment.Left
+
+local ModeSelectBtn = Instance.new("TextButton", ContentFrame)
+ModeSelectBtn.Size = UDim2.new(0, 54, 0, 32)
+ModeSelectBtn.Position = UDim2.new(1, -101, 1, -32)
+ModeSelectBtn.BackgroundColor3 = Color3.fromRGB(30, 36, 44)
+ModeSelectBtn.Text = "TALK | คุย"
+ModeSelectBtn.TextColor3 = Color3.fromRGB(50, 205, 150)
+ModeSelectBtn.Font = Enum.Font.GothamBold
+ModeSelectBtn.TextSize = 8
+ModeSelectBtn.TextWrapped = true
+Instance.new("UICorner", ModeSelectBtn).CornerRadius = UDim.new(0, 8)
+
+local ModeDropdown = Instance.new("Frame", ContentFrame)
+ModeDropdown.Size = UDim2.new(0, 54, 0, 60)
+ModeDropdown.Position = UDim2.new(1, -101, 1, -96)
+ModeDropdown.BackgroundColor3 = Color3.fromRGB(22, 27, 34)
+ModeDropdown.BorderSizePixel = 0
+ModeDropdown.Visible = false
+ModeDropdown.ZIndex = 20
+Instance.new("UICorner", ModeDropdown).CornerRadius = UDim.new(0, 8)
+local DropdownStroke = Instance.new("UIStroke", ModeDropdown)
+DropdownStroke.Color = Color3.fromRGB(48, 54, 61)
+
+local ModeBtn1 = Instance.new("TextButton", ModeDropdown)
+ModeBtn1.Size = UDim2.new(1, 0, 0.5, 0)
+ModeBtn1.BackgroundColor3 = Color3.fromRGB(35, 42, 52)
+ModeBtn1.BackgroundTransparency = 0
+ModeBtn1.Text = "TALK | คุย"
+ModeBtn1.TextColor3 = Color3.fromRGB(50, 205, 150)
+ModeBtn1.Font = Enum.Font.GothamBold
+ModeBtn1.TextSize = 8
+ModeBtn1.TextWrapped = true
+ModeBtn1.ZIndex = 21
+Instance.new("UICorner", ModeBtn1).CornerRadius = UDim.new(0, 6)
+
+local ModeBtn2 = Instance.new("TextButton", ModeDropdown)
+ModeBtn2.Size = UDim2.new(1, 0, 0.5, 0)
+ModeBtn2.Position = UDim2.new(0, 0, 0.5, 0)
+ModeBtn2.BackgroundTransparency = 1
+ModeBtn2.Text = "CODE | โปร"
+ModeBtn2.TextColor3 = Color3.fromRGB(200, 200, 200)
+ModeBtn2.Font = Enum.Font.GothamBold
+ModeBtn2.TextSize = 8
+ModeBtn2.TextWrapped = true
+ModeBtn2.ZIndex = 21
+Instance.new("UICorner", ModeBtn2).CornerRadius = UDim.new(0, 6)
+
+local SendBtn = Instance.new("TextButton", ContentFrame)
+SendBtn.Size = UDim2.new(0, 42, 0, 32)
+SendBtn.Position = UDim2.new(1, -42, 1, -32)
+SendBtn.BackgroundColor3 = Color3.fromRGB(50, 205, 150)
+SendBtn.Text = "ส่ง"
+SendBtn.TextColor3 = Color3.fromRGB(13, 17, 23)
+SendBtn.Font = Enum.Font.GothamBold
+SendBtn.TextSize = 11
+Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 8)
+
+local SuggestionBox = Instance.new("ScrollingFrame", ContentFrame)
+SuggestionBox.Size = UDim2.new(1, 0, 0, 100)
+SuggestionBox.Position = UDim2.new(0, 0, 1, -136)
+SuggestionBox.BackgroundColor3 = Color3.fromRGB(22, 27, 34)
+SuggestionBox.BorderSizePixel = 0
+SuggestionBox.Visible = false
+SuggestionBox.ScrollBarThickness = 2
+SuggestionBox.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", SuggestionBox).CornerRadius = UDim.new(0, 6)
+local SuggestionLayout = Instance.new("UIListLayout", SuggestionBox)
+SuggestionLayout.Padding = UDim.new(0, 2)
+
+--=====================================================
+-- CHAT HISTORY (แยกตามโหมด)
+--=====================================================
+local CurrentMode = "TALK"
+local ChatHistories = { TALK = {}, CODE = {} }
+
+local function SaveCurrentChatToHistory()
+	local history = {}
+	for _, child in pairs(ChatBoxFrame:GetChildren()) do
+		if child:IsA("TextLabel") then
+			table.insert(history, {
+				Text = child.Text,
+				TextColor3 = child.TextColor3,
+				TextXAlignment = child.TextXAlignment,
+				Font = child.Font,
+				TextSize = child.TextSize,
+				RichText = child.RichText,
+			})
+		end
+	end
+	ChatHistories[CurrentMode] = history
+end
+
+local function RestoreChatHistory(mode)
+	for _, child in pairs(ChatBoxFrame:GetChildren()) do
+		if child:IsA("TextLabel") then child:Destroy() end
+	end
+	for _, data in ipairs(ChatHistories[mode]) do
+		local lbl = Instance.new("TextLabel", ChatBoxFrame)
+		lbl.Size = UDim2.new(1, 0, 0, 0)
+		lbl.AutomaticSize = Enum.AutomaticSize.Y
+		lbl.BackgroundTransparency = 1
+		lbl.TextColor3 = data.TextColor3
+		lbl.TextXAlignment = data.TextXAlignment
+		lbl.Font = data.Font
+		lbl.TextSize = data.TextSize
+		lbl.TextWrapped = true
+		lbl.RichText = data.RichText
+		lbl.Text = data.Text
+	end
+	task.wait(0.02)
+	ChatBoxFrame.CanvasPosition = Vector2.new(0, ChatBoxFrame.AbsoluteCanvasSize.Y)
+end
+
+local AI_NAME = "Kuo Hub AI"
+
+local function AddChatMessage(sender, text, color)
+	local MsgLabel = Instance.new("TextLabel", ChatBoxFrame)
+	MsgLabel.Size = UDim2.new(1, 0, 0, 0)
+	MsgLabel.AutomaticSize = Enum.AutomaticSize.Y
+	MsgLabel.BackgroundTransparency = 1
+	MsgLabel.Font = Enum.Font.GothamSemibold
+	MsgLabel.TextSize = 12
+	MsgLabel.TextWrapped = true
+	MsgLabel.RichText = true
+
+	if sender == "You" then
+		MsgLabel.TextColor3 = Color3.fromRGB(50, 205, 150)
+		MsgLabel.TextXAlignment = Enum.TextXAlignment.Right
+		MsgLabel.Text = text .. " : [You]"
+		task.wait(0.02)
+		ChatBoxFrame.CanvasPosition = Vector2.new(0, ChatBoxFrame.AbsoluteCanvasSize.Y)
+	else
+		MsgLabel.TextColor3 = Color3.fromRGB(160, 170, 180)
+		MsgLabel.TextXAlignment = Enum.TextXAlignment.Left
+		local thinking = isThai(text) and ("["..AI_NAME.."]: กำลังประมวลผล...") or ("["..AI_NAME.."]: Thinking...")
+		MsgLabel.Text = thinking
+		task.wait(0.02)
+		ChatBoxFrame.CanvasPosition = Vector2.new(0, ChatBoxFrame.AbsoluteCanvasSize.Y)
+
+		task.wait(math.clamp(#text * 0.004, 0.3, 1.2))
+		MsgLabel.TextColor3 = color or Color3.fromRGB(220, 225, 230)
+
+		if string.find(text, "<font") or string.find(text, "```") then
+			MsgLabel.Text = "["..AI_NAME.."]: " .. text
+			task.wait(0.02)
+			ChatBoxFrame.CanvasPosition = Vector2.new(0, ChatBoxFrame.AbsoluteCanvasSize.Y)
+		else
+			local fullText = "["..AI_NAME.."]: " .. text
+			MsgLabel.Text = ""
+			for i = 1, utf8.len(fullText) or #fullText do
+				local nextOff = utf8.offset(fullText, i + 1)
+				MsgLabel.Text = string.sub(fullText, 1, nextOff and (nextOff - 1) or #fullText)
+				ChatBoxFrame.CanvasPosition = Vector2.new(0, ChatBoxFrame.AbsoluteCanvasSize.Y)
+				task.wait(0.012)
+			end
+		end
+	end
+end
+
+-- ข้อความต้อนรับ
+AddChatMessage("AI", "สวัสดีครับ! ผมคือ <b>Kuo Hub AI</b> 🤖 พิมพ์ <font color='#32CD96'>help</font> เพื่อดูความสามารถทั้งหมด | Hello! Type <font color='#32CD96'>help</font> to see my capabilities.", Color3.fromRGB(50, 205, 150))
+SaveCurrentChatToHistory()
+
+local function SwitchMode(mode)
+	if CurrentMode == mode then return end
+	SaveCurrentChatToHistory()
+	CurrentMode = mode
+	ModeDropdown.Visible = false
+	if mode == "TALK" then
+		ModeSelectBtn.Text = "TALK | คุย"
+		ModeBtn1.BackgroundTransparency = 0
+		ModeBtn1.TextColor3 = Color3.fromRGB(50, 205, 150)
+		ModeBtn2.BackgroundTransparency = 1
+		ModeBtn2.TextColor3 = Color3.fromRGB(200, 200, 200)
+	else
+		ModeSelectBtn.Text = "CODE | โปร"
+		ModeBtn2.BackgroundTransparency = 0
+		ModeBtn2.TextColor3 = Color3.fromRGB(50, 205, 150)
+		ModeBtn1.BackgroundTransparency = 1
+		ModeBtn1.TextColor3 = Color3.fromRGB(200, 200, 200)
+	end
+	RestoreChatHistory(mode)
+end
+
+ModeSelectBtn.MouseButton1Click:Connect(function() ModeDropdown.Visible = not ModeDropdown.Visible end)
+ModeBtn1.MouseButton1Click:Connect(function() SwitchMode("TALK") end)
+ModeBtn2.MouseButton1Click:Connect(function() SwitchMode("CODE") end)
+
+--=====================================================
+-- SUGGESTION BOX (พิมพ์ / เพื่อเลือกคนวาร์ป)
+--=====================================================
+local function RefreshSuggestions()
+	for _, child in pairs(SuggestionBox:GetChildren()) do
+		if child:IsA("TextButton") then child:Destroy() end
+	end
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer then
+			local btn = Instance.new("TextButton", SuggestionBox)
+			btn.Size = UDim2.new(1, 0, 0, 22)
+			btn.BackgroundColor3 = Color3.fromRGB(30, 36, 44)
+			btn.Text = "🚀 " .. p.Name
+			btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+			btn.Font = Enum.Font.Gotham
+			btn.TextSize = 10
+			Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+			btn.MouseButton1Click:Connect(function()
+				CommandInput.Text = "warp " .. p.Name
+				SuggestionBox.Visible = false
+			end)
+		end
+	end
+end
+
+CommandInput:GetPropertyChangedSignal("Text"):Connect(function()
+	if CurrentMode == "CODE" and CommandInput.Text:sub(1, 1) == "/" then
+		SuggestionBox.Visible = true
+		RefreshSuggestions()
+	else
+		SuggestionBox.Visible = false
+	end
+end)
+
+--=====================================================
+-- CHEAT STATE
+--=====================================================
+local AI = {
+	Fly = false, FlySpeed = 60,
+	Noclip = false, InfJump = false,
+	ESP = false, ESPColor = Color3.fromRGB(255, 0, 0), ESPColorName = "Red/แดง",
+	Hitbox = 0,
+	God = false, Bright = false,
+	Speed = nil, Jump = nil,
+	Spin = false,
+}
+local Conn = {}
+
+local function UpdateESP()
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character then
+			if AI.ESP then
+				local hl = p.Character:FindFirstChild("KuoAI_HL") or Instance.new("Highlight")
+				hl.Name = "KuoAI_HL"
+				hl.FillColor = AI.ESPColor
+				hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+				hl.FillTransparency = 0.3
+				hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				hl.Parent = p.Character
+			elseif p.Character:FindFirstChild("KuoAI_HL") then
+				p.Character.KuoAI_HL:Destroy()
+			end
+		end
+	end
+end
+
+RunService.RenderStepped:Connect(function()
+	if AI.Hitbox > 0 then
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= LocalPlayer and p.Character then
+				local root = p.Character:FindFirstChild("HumanoidRootPart")
+				if root and root.Size.X < AI.Hitbox then
+					root.Size = Vector3.new(AI.Hitbox, AI.Hitbox, AI.Hitbox)
+					root.Transparency = 0.7
+					root.CanCollide = false
+				end
+			end
+		end
+	end
+	if AI.ESP then UpdateESP() end
+	if AI.Spin then
+		local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if root then root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(35), 0) end
+	end
+end)
+
+-- speed/jump override (เชื่อมทีหลังสคริปต์หลัก จึงทับค่าได้)
+RunService.Heartbeat:Connect(function()
+	local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		if AI.Speed then hum.WalkSpeed = AI.Speed end
+		if AI.Jump then hum.UseJumpPower = true; hum.JumpPower = AI.Jump end
+	end
+end)
+
+local function FullReset(silent)
+	AI.Fly = false; AI.Noclip = false; AI.InfJump = false
+	AI.ESP = false; AI.Hitbox = 0; AI.God = false; AI.Bright = false
+	AI.Speed = nil; AI.Jump = nil; AI.Spin = false
+	UpdateESP()
+	for k, c in pairs(Conn) do pcall(function() c:Disconnect() end); Conn[k] = nil end
+	local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+	if hum then hum.WalkSpeed = 16; hum.JumpPower = 50; hum.PlatformStand = false; hum.MaxHealth = 100 end
+	Lighting.Brightness = 2; Lighting.ClockTime = 14; Lighting.GlobalShadows = true
+	if not silent then
+		AddChatMessage("AI", isThai(CommandInput.Text) and "รีเซ็ตค่าโปรทั้งหมดกลับเป็นปกติเรียบร้อยครับ ✅" or "All cheat values have been reset to normal ✅", Color3.fromRGB(240, 180, 50))
+		SaveCurrentChatToHistory()
+	end
+end
+
+local function SetupDeathReset(char)
+	local hum = char:WaitForChild("Humanoid", 5)
+	if hum then
+		hum.Died:Connect(function() FullReset(true) end)
+	end
+end
+if LocalPlayer.Character then SetupDeathReset(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(SetupDeathReset)
+
+local function HasAny(text, words)
+	for _, w in ipairs(words) do
+		if text:find(w) then return true end
+	end
+	return false
+end
+
+--=====================================================
+-- TALK ENGINE (ไทย + อังกฤษ)
+--=====================================================
+local function Reply(text, th, en)
+	AddChatMessage("AI", isThai(text) and th or en, Color3.fromRGB(120, 170, 240))
+	SaveCurrentChatToHistory()
+end
+
+local function ProcessTalk(raw)
+	local c = string.lower(raw):gsub("['\"%,%.%-_?!]", ""):gsub("%s+", " ")
+	local name = LocalPlayer.DisplayName
+
+	if HasAny(c, {"สวัสดี", "หวัดดี", "ดีครับ", "ดีค่ะ", "ดีจ้า", "โย่", "ฮัลโหล", "ทักทาย", "hi", "hello", "hey", "yo", "sup", "greetings"}) then
+		local th = {
+			"สวัสดีครับคุณ "..name.."! มีอะไรให้ Kuo Hub AI ช่วยไหมครับ? พิมพ์ help เพื่อดูคำสั่งทั้งหมด",
+			"โย่ว! ว่าไงครับท่าน "..name.." อยากเปิดโปรตัวไหน หรืออยากคุยเล่นก็ได้นะ 555",
+		}
+		local en = {
+			"Hello, "..name.."! How can Kuo Hub AI help you today? Type help to see all commands.",
+			"Hey there! Want to toggle a cheat or just chat? I'm all ears!",
+		}
+		return Reply(raw, th[math.random(#th)], en[math.random(#en)])
+	end
+
+	if HasAny(c, {"เป็นไงบ้าง", "สบายดีไหม", "ทำอะไรอยู่", "ทำไรอยู่", "how are you", "hows it going", "how's it going", "whats up", "what's up", "wsp", "how u doing"}) then
+		return Reply(raw,
+			"ผมรอตอบคำถามอยู่ตลอดเลยครับ ไม่มีวันเหนื่อย! ว่าแต่คุณล่ะ วันนี้ลุยแมปอะไรยาวๆ ดี?",
+			"I'm always here waiting to help, never tired! What map are you grinding today?")
+	end
+
+	if HasAny(c, {"คุณคือใคร", "นายคือใคร", "แกคือใคร", "ชื่ออะไร", "แนะนำตัว", "who are you", "what are you", "your name", "introduce yourself"}) then
+		return Reply(raw,
+			"ผมคือ <b>Kuo Hub AI</b> 🤖 ผู้ช่วยอัจฉริยะของสคริปต์ Kuo Hub รองรับทั้งภาษาไทยและอังกฤษ ถามได้ทุกเรื่องเลยครับ!",
+			"I'm <b>Kuo Hub AI</b> 🤖, the smart assistant built into Kuo Hub. I speak both Thai and English — ask me anything!")
+	end
+
+	if HasAny(c, {"เล่นเกมอะไร", "เล่นแมปอะไร", "แมปอะไร", "เกมอะไร", "อยู่แมปไหน", "what game", "what map", "which game", "which map"}) then
+		return Reply(raw,
+			"ตอนนี้คุณกำลังเล่นแมป: <b>"..CurrentGameName.."</b> อยู่ครับ ลุยให้สนุกนะ!",
+			"You're currently playing: <b>"..CurrentGameName.."</b>. Have fun out there!")
+	end
+
+	if HasAny(c, {"ควรเปิดโปรไหน", "แนะนำโปร", "เปิดอะไรดี", "โปรอะไรดี", "recommend", "what cheat", "best cheat", "what should i use", "which cheat"}) then
+		return Reply(raw,
+			"จากแมป <b>"..CurrentGameName.."</b> ผมแนะนำให้ลอง: <font color='#32CD96'>speed 100</font> (วิ่งเร็ว), <font color='#32CD96'>esp red</font> (มองทะลุ), หรือ <font color='#32CD96'>fly</font> (บิน) ครับ สลับไปโหมด CODE แล้วพิมพ์ได้เลย!",
+			"For <b>"..CurrentGameName.."</b>, I'd suggest: <font color='#32CD96'>speed 100</font>, <font color='#32CD96'>esp red</font>, or <font color='#32CD96'>fly</font>. Switch to CODE mode and type the command!")
+	end
+
+	if HasAny(c, {"help", "ช่วย", "คำสั่ง", "ทำอะไรได้บ้าง", "ใช้ยังไง", "commands", "menu", "what can you do", "how to use"}) then
+		local thMsg = "🤖 <b>Kuo Hub AI</b> มี 2 โหมด:\n\n" ..
+			"💬 <b>โหมด TALK</b> — คุยเล่น ถามตอบ (ไทย/อังกฤษ)\n\n" ..
+			"⚡ <b>โหมด CODE</b> — คำสั่งโปร (พิมพ์ได้ทั้ง 2 ภาษา):\n" ..
+			"• <font color='#32CD96'>fly / บิน</font> — บินอิสระ\n" ..
+			"• <font color='#32CD96'>unfly / ปิดบิน</font>\n" ..
+			"• <font color='#32CD96'>speed 100 / วิ่ง 100</font> — วิ่งเร็ว\n" ..
+			"• <font color='#32CD96'>jump 100 / โดด 100</font> — โดดสูง\n" ..
+			"• <font color='#32CD96'>infjump / โดดไม่จำกัด</font>\n" ..
+			"• <font color='#32CD96'>noclip / ทะลุ</font>\n" ..
+			"• <font color='#32CD96'>esp red / มอง แดง</font> — มองทะลุ (รองรับ: red, green, blue, yellow, pink, purple, white, black / แดง เขียว น้ำเงิน เหลือง ชมพู ม่วง ขาว ดำ)\n" ..
+			"• <font color='#32CD96'>unesp / ปิดมอง</font>\n" ..
+			"• <font color='#32CD96'>hitbox 10 / ฮิต 10</font> — ขยายฮิตบ็อกซ์\n" ..
+			"• <font color='#32CD96'>spin / สปิน</font> — หมุนตัว | <font color='#32CD96'>unspin / ปิดสปิน</font>\n" ..
+			"• <font color='#32CD96'>bright / สว่าง</font> — สว่างทั้งแมป\n" ..
+			"• <font color='#32CD96'>god / อมตะ</font>\n" ..
+			"• <font color='#32CD96'>invisible / ล่องหน</font>\n" ..
+			"• <font color='#32CD96'>warp ชื่อ / วาป ชื่อ</font> — วาร์ปหาคน (หรือพิมพ์ <b>/</b> เพื่อเลือกจากรายชื่อ)\n" ..
+			"• <font color='#32CD96'>reset / รีเซ็ต</font> — ล้างโปรทั้งหมด"
+		local enMsg = "🤖 <b>Kuo Hub AI</b> has 2 modes:\n\n" ..
+			"💬 <b>TALK mode</b> — chat with me (Thai/English)\n\n" ..
+			"⚡ <b>CODE mode</b> — cheat commands:\n" ..
+			"• <font color='#32CD96'>fly</font> — fly freely\n" ..
+			"• <font color='#32CD96'>unfly</font>\n" ..
+			"• <font color='#32CD96'>speed 100</font> — run faster\n" ..
+			"• <font color='#32CD96'>jump 100</font> — jump higher\n" ..
+			"• <font color='#32CD96'>infjump</font> — infinite jump\n" ..
+			"• <font color='#32CD96'>noclip</font> — walk through walls\n" ..
+			"• <font color='#32CD96'>esp red</font> — player ESP (red, green, blue, yellow, pink, purple, white, black)\n" ..
+			"• <font color='#32CD96'>unesp</font>\n" ..
+			"• <font color='#32CD96'>hitbox 10</font> — expand hitboxes\n" ..
+			"• <font color='#32CD96'>spin</font> — spin bot | <font color='#32CD96'>unspin</font>\n" ..
+			"• <font color='#32CD96'>bright</font> — full brightness\n" ..
+			"• <font color='#32CD96'>god</font> — god mode\n" ..
+			"• <font color='#32CD96'>invisible</font>\n" ..
+			"• <font color='#32CD96'>warp Name</font> — teleport to player (or type <b>/</b> to pick)\n" ..
+			"• <font color='#32CD96'>reset</font> — reset all cheats"
+		AddChatMessage("AI", isThai(raw) and thMsg or enMsg, Color3.fromRGB(120, 170, 240))
+		SaveCurrentChatToHistory()
+		return
+	end
+
+	if HasAny(c, {"ขอบคุณ", "แต้ง", "thanks", "thank you", "thankyou", "thx", "ty"}) then
+		return Reply(raw,
+			"ยินดีครับผม! มีอะไรให้ช่วยอีกก็เรียกได้เลยนะ 😄",
+			"You're welcome! Call me anytime you need help 😄")
+	end
+
+	if HasAny(c, {"บาย", "ลาก่อน", "ไปแล้ว", "ไปนอน", "bye", "goodbye", "goodnight", "gn", "cya", "see you"}) then
+		return Reply(raw,
+			"บายครับ! ไว้เจอกันใหม่ ขอให้สนุกกับเกมนะ 🎮",
+			"Goodbye! See you next time, enjoy the game 🎮")
+	end
+
+	if HasAny(c, {"เก่ง", "สุดยอด", "เจ๋ง", "ฉลาด", "awesome", "amazing", "great", "cool", "smart", "op", "nice"}) then
+		return Reply(raw,
+			"เขินเลยครับเนี่ย ฮ่าๆ ระบบ Kuo Hub ซะอย่าง ต้องเก่งตามสคริปต์หน่อยล่ะ! 😎",
+			"Haha, thanks! Gotta keep up with how powerful Kuo Hub is! 😎")
+	end
+
+	if HasAny(c, {"เบื่อ", "เหงา", "ไม่มีไรทำ", "bored", "boring"}) then
+		return Reply(raw,
+			"เบื่อเหรอครับ? ลองสลับไปโหมด CODE แล้วพิมพ์ <font color='#32CD96'>fly</font> ไปป่วนคนอื่นดูสิ รับรองหายเบื่อ! 555",
+			"Bored? Switch to CODE mode and type <font color='#32CD96'>fly</font> — guaranteed fun! 😆")
+	end
+
+	if HasAny(c, {"รัก", "ชอบ", "น่ารัก", "love", "cute", "ilu"}) then
+		return Reply(raw,
+			"โอ้โห AI เขินแย่เลยนะเนี่ย! 💚 ขอให้ใช้ Kuo Hub ให้สนุกนะครับ",
+			"Aww, you're making this AI blush! 💚 Enjoy using Kuo Hub!")
+	end
+
+	-- ตอบกลับแบบทั่วไป
+	return Reply(raw,
+		"ขอโทษด้วยนะครับ ผมยังไม่เข้าใจข้อความนี้ พิมพ์ <font color='#32CD96'>help</font> เพื่อดูสิ่งที่ผมทำได้ หรือสลับไปโหมด CODE เพื่อใช้คำสั่งโปรได้เลยครับ",
+		"Sorry, I didn't quite get that. Type <font color='#32CD96'>help</font> to see what I can do, or switch to CODE mode for cheat commands!")
+end
+
+--=====================================================
+-- CODE ENGINE (ไทย + อังกฤษ)
+--=====================================================
+local function ok(th, en)
+	AddChatMessage("AI", isThai(CommandInput.Text) and th or en, Color3.fromRGB(50, 205, 150))
+	SaveCurrentChatToHistory()
+end
+local function infoMsg(th, en)
+	AddChatMessage("AI", isThai(CommandInput.Text) and th or en, Color3.fromRGB(180, 180, 180))
+	SaveCurrentChatToHistory()
+end
+local function err(th, en)
+	AddChatMessage("AI", isThai(CommandInput.Text) and th or en, Color3.fromRGB(255, 100, 100))
+	SaveCurrentChatToHistory()
+end
+
+local COLOR_MAP = {
+	{th = "แดง", en = "red", color = Color3.fromRGB(220, 20, 20)},
+	{th = "เขียว", en = "green", color = Color3.fromRGB(20, 160, 60)},
+	{th = "น้ำเงิน", en = "blue", color = Color3.fromRGB(20, 80, 220)},
+	{th = "ฟ้า", en = "sky", color = Color3.fromRGB(50, 150, 255)},
+	{th = "เหลือง", en = "yellow", color = Color3.fromRGB(240, 200, 20)},
+	{th = "ชมพู", en = "pink", color = Color3.fromRGB(240, 50, 150)},
+	{th = "ม่วง", en = "purple", color = Color3.fromRGB(150, 50, 240)},
+	{th = "ขาว", en = "white", color = Color3.fromRGB(255, 255, 255)},
+	{th = "ดำ", en = "black", color = Color3.fromRGB(0, 0, 0)},
+	{th = "เทา", en = "gray", color = Color3.fromRGB(120, 120, 120)},
+}
+
+local function ProcessCode(raw)
+	local c = string.lower(raw):gsub("['\"%,%.%-_?!]", "")
+	local cs = c:gsub("%s+", " ")
+	local cn = c:gsub("%s+", "")
+	local num = tonumber(cn:match("%d+"))
+	local char = LocalPlayer.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+
+	-- ===== HELP =====
+	if cn == "help" or HasAny(cs, {"คำสั่ง", "วิธีใช้", "รายการ", "command list"}) then
+		ProcessTalk("help")
+		return
+	end
+
+	-- ===== RESET =====
+	if HasAny(cs, {"reset", "รีเซ็ต", "รีเซต", "ล้างค่า", "clear"}) then
+		FullReset(false)
+		return
+	end
+
+	-- ===== FLY (เชื่อมกับ setFly ของสคริปต์หลักถ้ามี) =====
+	if HasAny(cs, {"ปิดบิน", "unfly", "stop fly", "land"}) then
+		AI.Fly = false
+		pcall(function() if typeof(setFly) == "function" then setFly(false) end end)
+		if hum then hum.PlatformStand = false end
+		infoMsg("ปิดระบบบินเรียบร้อย", "Fly disabled")
+		return
+	end
+	if HasAny(cs, {"บิน", "fly"}) then
+		AI.Fly = true
+		local usedMain = pcall(function()
+			if typeof(setFly) == "function" then setFly(true); return true end
+			return false
+		end)
+		if not usedMain then
+			if Conn.Fly then Conn.Fly:Disconnect() end
+			Conn.Fly = RunService.RenderStepped:Connect(function()
+				if AI.Fly and root and hum then
+					hum.PlatformStand = true
+					local cam = workspace.CurrentCamera
+					local md = hum.MoveDirection
+					local vel = Vector3.zero
+					if md.Magnitude > 0 then
+						local rel = cam.CFrame:VectorToObjectSpace(md)
+						vel = (cam.CFrame.LookVector * (-rel.Z) + cam.CFrame.RightVector * rel.X).Unit * AI.FlySpeed
+					end
+					root.AssemblyLinearVelocity = vel
+				end
+			end)
+		end
+		ok("เปิดระบบบินเรียบร้อย! (กดปุ่ม F ของสคริปต์หลักก็ได้)", "Fly enabled! (you can also press F from the main script)")
+		return
+	end
+
+	-- ===== SPEED =====
+	if HasAny(cs, {"speed", "วิ่ง", "run", "ไว"}) then
+		local v = num or 100
+		AI.Speed = v
+		ok("ตั้งความเร็ววิ่งเป็น "..v.." เรียบร้อย!", "Speed set to "..v.."!")
+		return
+	end
+
+	-- ===== JUMP =====
+	if HasAny(cs, {"jump", "โดด", "กระโดด"}) and not HasAny(cs, {"infjump", "ไม่จำกัด", "โดดรัว"}) then
+		local v = num or 100
+		AI.Jump = v
+		ok("ตั้งพลังโดดเป็น "..v.." เรียบร้อย!", "Jump power set to "..v.."!")
+		return
+	end
+
+	-- ===== INFINITE JUMP =====
+	if HasAny(cs, {"infjump", "โดดไม่จำกัด", "โดดรัว", "กระโดดรัว", "infinite jump"}) then
+		AI.InfJump = not AI.InfJump
+		if AI.InfJump then
+			if Conn.InfJump then Conn.InfJump:Disconnect() end
+			Conn.InfJump = UserInputService.JumpRequest:Connect(function()
+				local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+				if AI.InfJump and h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+			end)
+			ok("เปิดโดดไม่จำกัดเรียบร้อย!", "Infinite jump enabled!")
+		else
+			if Conn.InfJump then Conn.InfJump:Disconnect(); Conn.InfJump = nil end
+			infoMsg("ปิดโดดไม่จำกัดแล้ว", "Infinite jump disabled")
+		end
+		return
+	end
+
+	-- ===== NOCLIP =====
+	if HasAny(cs, {"noclip", "ทะลุ", "ทะลุกำแพง", "เดินทะลุ", "wallhack walk"}) then
+		AI.Noclip = not AI.Noclip
+		if AI.Noclip then
+			if Conn.Noclip then Conn.Noclip:Disconnect() end
+			Conn.Noclip = RunService.Stepped:Connect(function()
+				local ch = LocalPlayer.Character
+				if ch then
+					for _, v in pairs(ch:GetDescendants()) do
+						if v:IsA("BasePart") then v.CanCollide = false end
+					end
+				end
+			end)
+			ok("เปิดทะลุกำแพงเรียบร้อย!", "Noclip enabled!")
+		else
+			if Conn.Noclip then Conn.Noclip:Disconnect(); Conn.Noclip = nil end
+			infoMsg("ปิดทะลุกำแพงแล้ว", "Noclip disabled")
+		end
+		return
+	end
+
+	-- ===== ESP =====
+	if HasAny(cs, {"unesp", "ปิดมอง", "ปิดesp", "เลิกมอง"}) then
+		AI.ESP = false
+		UpdateESP()
+		infoMsg("ปิดมองทะลุแล้ว", "ESP disabled")
+		return
+	end
+	if HasAny(cs, {"esp", "มอง", "มองทะลุ", "ไฮไลท์", "highlight"}) then
+		local chosen = COLOR_MAP[1]
+		for _, data in ipairs(COLOR_MAP) do
+			if cs:find(data.th) or cs:find(data.en) then
+				chosen = data
+				break
+			end
+		end
+		AI.ESP = true
+		AI.ESPColor = chosen.color
+		AI.ESPColorName = chosen.en.."/"..chosen.th
+		UpdateESP()
+		ok("เปิดมองทะลุสี "..chosen.th.." ("..chosen.en..") เรียบร้อย!", "ESP enabled: "..chosen.en)
+		return
+	end
+
+	-- ===== HITBOX =====
+	if HasAny(cs, {"hitbox", "ฮิต", "ตัวใหญ่", "หัวโต"}) then
+		local v = num or 10
+		AI.Hitbox = v
+		ok("ขยายฮิตบ็อกซ์เป็น "..v.." เรียบร้อย!", "Hitbox expanded to "..v.."!")
+		return
+	end
+
+	-- ===== SPIN =====
+	if HasAny(cs, {"unspin", "ปิดสปิน", "หยุดหมุน"}) then
+		AI.Spin = false
+		infoMsg("ปิดสปินบอทแล้ว", "Spin bot disabled")
+		return
+	end
+	if HasAny(cs, {"spin", "สปิน", "หมุน", "spinbot"}) then
+		AI.Spin = true
+		ok("เปิดสปินบอทเรียบร้อย!", "Spin bot enabled!")
+		return
+	end
+
+	-- ===== BRIGHT =====
+	if HasAny(cs, {"unbright", "ปิดสว่าง", "มืด"}) then
+		AI.Bright = false
+		if Conn.Bright then Conn.Bright:Disconnect(); Conn.Bright = nil end
+		Lighting.GlobalShadows = true
+		infoMsg("ปิดสว่างสุดแล้ว", "Fullbright disabled")
+		return
+	end
+	if HasAny(cs, {"bright", "สว่าง", "สว่างสุด", "fullbright"}) then
+		AI.Bright = true
+		if Conn.Bright then Conn.Bright:Disconnect() end
+		Conn.Bright = RunService.RenderStepped:Connect(function()
+			if AI.Bright then
+				Lighting.Brightness = 2
+				Lighting.ClockTime = 14
+				Lighting.GlobalShadows = false
+				Lighting.FogEnd = 999999
+			end
+		end)
+		ok("เปิดสว่างสุดทั้งแมปเรียบร้อย!", "Fullbright enabled!")
+		return
+	end
+
+	-- ===== GOD =====
+	if HasAny(cs, {"god", "อมตะ", "เลือดอนันต์", "ไม่ตาย", "godmode"}) then
+		AI.God = true
+		if hum then hum.MaxHealth = math.huge; hum.Health = math.huge end
+		ok("เปิดโหมดอมตะเรียบร้อย!", "God mode enabled!")
+		return
+	end
+
+	-- ===== INVISIBLE (เชื่อมกับ applyInvisible ของสคริปต์หลัก) =====
+	if HasAny(cs, {"invisible", "ล่องหน", "มองไม่เห็น", "หายตัว"}) then
+		local used = pcall(function() if typeof(applyInvisible) == "function" then applyInvisible(true); return true end return false end)
+		ok("เปิดโหมดล่องหนเรียบร้อย!", "Invisible mode enabled!")
+		return
+	end
+	if HasAny(cs, {"uninvisible", "ปิดล่องหน", "เลิกล่องหน", "มาเห็น"}) then
+		pcall(function() if typeof(applyInvisible) == "function" then applyInvisible(false) end end)
+		infoMsg("ปิดล่องหนแล้ว", "Invisible mode disabled")
+		return
+	end
+
+	-- ===== WARP =====
+	if HasAny(cs, {"warp", "วาป", "วาร์ป", "ไปหา", "teleport", "goto"}) then
+		local found = nil
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= LocalPlayer then
+				local nm = string.lower(p.Name)
+				local dn = string.lower(p.DisplayName)
+				if nm ~= "" and (cs:find(nm, 1, true) or cs:find(dn, 1, true)) then
+					found = p
+					break
+				end
+			end
+		end
+		if found and found.Character and found.Character:FindFirstChild("HumanoidRootPart") and root then
+			root.CFrame = found.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+			ok("วาร์ปไปหา "..found.DisplayName.." เรียบร้อย!", "Teleported to "..found.DisplayName.."!")
+		else
+			err("ไม่พบผู้เล่นนี้ พิมพ์ / เพื่อเลือกจากรายชื่อ", "Player not found. Type / to pick from the list.")
+		end
+		return
+	end
+
+	err("ไม่พบคำสั่งนี้ พิมพ์ help เพื่อดูรายการคำสั่งทั้งหมด",
+		"Unknown command. Type help to see all commands.")
+end
+
+--=====================================================
+-- SUBMIT
+--=====================================================
+local function OnSubmit()
+	local text = CommandInput.Text
+	if text and text ~= "" then
+		AddChatMessage("You", text, Color3.fromRGB(240, 240, 240))
+		SaveCurrentChatToHistory()
+		CommandInput.Text = ""
+		SuggestionBox.Visible = false
+		task.wait(0.05)
+		if CurrentMode == "TALK" then
+			ProcessTalk(text)
+		else
+			ProcessCode(text)
+		end
+	end
+end
+
+SendBtn.MouseButton1Click:Connect(OnSubmit)
+CommandInput.FocusLost:Connect(function(enter) if enter then OnSubmit() end end)
+
+end
   
 -- =========================  
 -- FLY  
