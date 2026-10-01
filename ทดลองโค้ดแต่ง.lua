@@ -2942,7 +2942,33 @@ end)
 --=====================================================
 -- CHEAT STATE
 --=====================================================
-local AI = {
+local Invis = {On = false, Parts = {}}
+	local function RefreshInvisParts()
+		Invis.Parts = {}
+		local char = LocalPlayer.Character
+		if not char then return end
+		for _, v in pairs(char:GetDescendants()) do
+			if v:IsA("BasePart") and v.Transparency < 1 then
+				table.insert(Invis.Parts, v)
+			end
+		end
+	end
+	local function SetInvis(state)
+		Invis.On = state
+		if state then
+			RefreshInvisParts()
+			for _, v in ipairs(Invis.Parts) do
+				v.LocalTransparencyModifier = 1
+			end
+		else
+			for _, v in ipairs(Invis.Parts) do
+				pcall(function() v.LocalTransparencyModifier = 0 end)
+			end
+		end
+	end
+	Invis.Set = SetInvis
+
+	local AI = {
 	Fly = false, FlySpeed = 60,
 	Noclip = false, InfJump = false,
 	ESP = false, ESPColor = Color3.fromRGB(255, 0, 0), ESPColorName = "Red/แดง",
@@ -2991,7 +3017,25 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- speed/jump override (เชื่อมทีหลังสคริปต์หลัก จึงทับค่าได้)
+-- invisible: offset trick (ซ่อนจากคนอื่นใน MM2)
+	RunService.Heartbeat:Connect(function()
+		if Invis.On then
+			local char = LocalPlayer.Character
+			local r = char and char:FindFirstChild("HumanoidRootPart")
+			local h = char and char:FindFirstChildOfClass("Humanoid")
+			if r and h then
+				local cf = r.CFrame
+				local off = h.CameraOffset
+				r.CFrame = cf * CFrame.new(0, -200000, 0)
+				h.CameraOffset = Vector3.new(off.X, off.Y + 200000, off.Z)
+				RunService.RenderStepped:Wait()
+				r.CFrame = cf
+				h.CameraOffset = off
+			end
+		end
+	end)
+
+	-- speed/jump override (เชื่อมทีหลังสคริปต์หลัก จึงทับค่าได้)
 RunService.Heartbeat:Connect(function()
 	local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 	if hum then
@@ -3003,6 +3047,7 @@ end)
 local function FullReset(silent)
 	AI.Fly = false; AI.Noclip = false; AI.InfJump = false
 	AI.ESP = false; AI.Hitbox = 0; AI.God = false; AI.Bright = false
+	SetInvis(false)
 	AI.Speed = nil; AI.Jump = nil; AI.Spin = false
 	UpdateESP()
 	for k, c in pairs(Conn) do pcall(function() c:Disconnect() end); Conn[k] = nil end
@@ -3010,12 +3055,14 @@ local function FullReset(silent)
 	if hum then hum.WalkSpeed = 16; hum.JumpPower = 50; hum.PlatformStand = false; hum.MaxHealth = 100 end
 	Lighting.Brightness = 2; Lighting.ClockTime = 14; Lighting.GlobalShadows = true
 	if not silent then
-		AddChatMessage("AI", isThai(CommandInput.Text) and "รีเซ็ตค่าโปรทั้งหมดกลับเป็นปกติเรียบร้อยครับ ✅" or "All cheat values have been reset to normal ✅", Color3.fromRGB(240, 180, 50))
+		AddChatMessage("AI", LastTH and "รีเซ็ตค่าโปรทั้งหมดกลับเป็นปกติเรียบร้อยครับ ✅" or "All cheat values have been reset to normal ✅", Color3.fromRGB(240, 180, 50))
 		SaveCurrentChatToHistory()
 	end
 end
 
 local function SetupDeathReset(char)
+	task.wait(0.3)
+	if Invis.On then RefreshInvisParts() end
 	local hum = char:WaitForChild("Humanoid", 5)
 	if hum then
 		hum.Died:Connect(function() FullReset(true) end)
@@ -3160,16 +3207,17 @@ end
 --=====================================================
 -- CODE ENGINE (ไทย + อังกฤษ)
 --=====================================================
+local LastTH = true
 local function ok(th, en)
-	AddChatMessage("AI", isThai(CommandInput.Text) and th or en, Color3.fromRGB(50, 205, 150))
+	AddChatMessage("AI", LastTH and th or en, Color3.fromRGB(50, 205, 150))
 	SaveCurrentChatToHistory()
 end
 local function infoMsg(th, en)
-	AddChatMessage("AI", isThai(CommandInput.Text) and th or en, Color3.fromRGB(180, 180, 180))
+	AddChatMessage("AI", LastTH and th or en, Color3.fromRGB(180, 180, 180))
 	SaveCurrentChatToHistory()
 end
 local function err(th, en)
-	AddChatMessage("AI", isThai(CommandInput.Text) and th or en, Color3.fromRGB(255, 100, 100))
+	AddChatMessage("AI", LastTH and th or en, Color3.fromRGB(255, 100, 100))
 	SaveCurrentChatToHistory()
 end
 
@@ -3210,34 +3258,34 @@ local function ProcessCode(raw)
 	-- ===== FLY (เชื่อมกับ setFly ของสคริปต์หลักถ้ามี) =====
 	if HasAny(cs, {"ปิดบิน", "unfly", "stop fly", "land"}) then
 		AI.Fly = false
-		pcall(function() if typeof(setFly) == "function" then setFly(false) end end)
+		if Conn.Fly then Conn.Fly:Disconnect(); Conn.Fly = nil end
 		if hum then hum.PlatformStand = false end
 		infoMsg("ปิดระบบบินเรียบร้อย", "Fly disabled")
 		return
 	end
 	if HasAny(cs, {"บิน", "fly"}) then
 		AI.Fly = true
-		local usedMain = pcall(function()
-			if typeof(setFly) == "function" then setFly(true); return true end
-			return false
-		end)
-		if not usedMain then
-			if Conn.Fly then Conn.Fly:Disconnect() end
-			Conn.Fly = RunService.RenderStepped:Connect(function()
-				if AI.Fly and root and hum then
-					hum.PlatformStand = true
-					local cam = workspace.CurrentCamera
-					local md = hum.MoveDirection
-					local vel = Vector3.zero
-					if md.Magnitude > 0 then
-						local rel = cam.CFrame:VectorToObjectSpace(md)
-						vel = (cam.CFrame.LookVector * (-rel.Z) + cam.CFrame.RightVector * rel.X).Unit * AI.FlySpeed
-					end
-					root.AssemblyLinearVelocity = vel
+		if Conn.Fly then Conn.Fly:Disconnect() end
+		Conn.Fly = RunService.RenderStepped:Connect(function()
+			local ch = LocalPlayer.Character
+			local r = ch and ch:FindFirstChild("HumanoidRootPart")
+			local h = ch and ch:FindFirstChildOfClass("Humanoid")
+			if AI.Fly and r and h then
+				h.PlatformStand = true
+				local cam = workspace.CurrentCamera
+				local md = h.MoveDirection
+				local vel = Vector3.zero
+				if md.Magnitude > 0 then
+					local rel = cam.CFrame:VectorToObjectSpace(md)
+					vel = (cam.CFrame.LookVector * (-rel.Z) + cam.CFrame.RightVector * rel.X).Unit * AI.FlySpeed
 				end
-			end)
-		end
-		ok("เปิดระบบบินเรียบร้อย! (กดปุ่ม F ของสคริปต์หลักก็ได้)", "Fly enabled! (you can also press F from the main script)")
+				r.AssemblyLinearVelocity = vel
+				r.CFrame = CFrame.new(r.Position, r.Position + cam.CFrame.LookVector)
+			elseif not AI.Fly and h then
+				h.PlatformStand = false
+			end
+		end)
+		ok("เปิดระบบบินเรียบร้อย! (เดินตามทิศกล้อง + Space/Ctrl โดดลงของสคริปต์หลัก)", "Fly enabled!")
 		return
 	end
 
@@ -3369,15 +3417,15 @@ local function ProcessCode(raw)
 		return
 	end
 
-	-- ===== INVISIBLE (เชื่อมกับ applyInvisible ของสคริปต์หลัก) =====
-	if HasAny(cs, {"invisible", "ล่องหน", "มองไม่เห็น", "หายตัว"}) then
-		local used = pcall(function() if typeof(applyInvisible) == "function" then applyInvisible(true); return true end return false end)
-		ok("เปิดโหมดล่องหนเรียบร้อย!", "Invisible mode enabled!")
+	-- ===== INVISIBLE (self-contained) =====
+	if HasAny(cs, {"uninvisible", "ปิดล่องหน", "เลิกล่องหน", "มาเห็น", "เลิกหาย"}) then
+		Invis.Set(false)
+		infoMsg("ปิดล่องหนแล้ว", "Invisible mode disabled")
 		return
 	end
-	if HasAny(cs, {"uninvisible", "ปิดล่องหน", "เลิกล่องหน", "มาเห็น"}) then
-		pcall(function() if typeof(applyInvisible) == "function" then applyInvisible(false) end end)
-		infoMsg("ปิดล่องหนแล้ว", "Invisible mode disabled")
+	if HasAny(cs, {"ล่องหน", "invisible", "หายตัว"}) then
+		Invis.Set(true)
+		ok("เปิดโหมดล่องหนเรียบร้อย!", "Invisible mode enabled!")
 		return
 	end
 
@@ -3413,6 +3461,8 @@ end
 local function OnSubmit()
 	local text = CommandInput.Text
 	if text and text ~= "" then
+		LastTH = isThai(text)
+		print("[Kuo Hub AI] รับคำสั่ง | command:", text, "| mode:", CurrentMode)
 		AddChatMessage("You", text, Color3.fromRGB(240, 240, 240))
 		SaveCurrentChatToHistory()
 		CommandInput.Text = ""
