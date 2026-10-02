@@ -37,21 +37,21 @@ local humanoid = character:WaitForChild("Humanoid")
 local root = character:WaitForChild("HumanoidRootPart")  
   
 --// SETTINGS    
-local speed = 60
-local walkSpeed = 16
-local ESP_ENABLED = false  
-local AUTO_WARP_GUN = false  
-local INFINITE_JUMP = false  
-local AIMLOCK = false  
+getgenv().speed = 60
+getgenv().walkSpeed = 16
+getgenv().ESP_ENABLED = false  
+getgenv().AUTO_WARP_GUN = false  
+getgenv().INFINITE_JUMP = false  
+getgenv().AIMLOCK = false  
 local LOCK_TARGET = nil  
-local NOCLIP = false  
-local AUTO_SHOOT = false  
-local AUTO_KNIFE = false  
-local KILL_AURA = false    
+getgenv().NOCLIP = false  
+getgenv().AUTO_SHOOT = false  
+getgenv().AUTO_KNIFE = false  
+getgenv().KILL_AURA = false    
 local MAX_DISTANCE = 1000  
-local AUTO_COIN_COLLECT = false  
-local CHAT_ANNOUNCE = false  
-local Anti_Pling = false  
+getgenv().AUTO_COIN_COLLECT = false  
+getgenv().CHAT_ANNOUNCE = false  
+getgenv().Anti_Pling = false  
 local AUTO_PUSH = false  
 local AUTO_LEECH_MURDER = false  
 local LOOP_DELAY = 0.1  
@@ -60,8 +60,8 @@ local lastGunEquip = 0
 local gotGunThisRound = false  
 local wasInvisibleBeforeWarp = false  
 local SAFE_DISTANCE_GUN = 2  
-local GunESP = false  
-local Shot_AURA = false  
+getgenv().GunESP = false  
+getgenv().Shot_AURA = false  
 
 --===================÷÷÷÷==
 --Chat ai
@@ -81,7 +81,7 @@ local Player = Players.LocalPlayer
 -- SETTINGS
 --==================================================
 
-local speed = 60
+getgenv().speed = 60
 local TOGGLE_KEY = Enum.KeyCode.F
 
 --==================================================
@@ -1666,7 +1666,7 @@ end)
   
 local TweenService = game:GetService("TweenService")  
   
-local COIN_SPEED = 30  
+getgenv().COIN_SPEED = 30  
 local SAFE_DISTANCE = 40  
 local STUCK_TIME = 1  
   
@@ -2838,7 +2838,7 @@ local function AddChatMessage(sender, text, color)
 	MsgLabel.AutomaticSize = Enum.AutomaticSize.Y
 	MsgLabel.BackgroundTransparency = 1
 	MsgLabel.Font = Enum.Font.GothamSemibold
-	MsgLabel.TextSize = 12
+	MsgLabel.TextSize = 11
 	MsgLabel.TextWrapped = true
 	MsgLabel.RichText = true
 
@@ -3048,6 +3048,22 @@ local function FullReset(silent)
 	AI.Fly = false; AI.Noclip = false; AI.InfJump = false
 	AI.ESP = false; AI.Hitbox = 0; AI.God = false; AI.Bright = false
 	SetInvis(false)
+	pcall(function() setFly(false) end)
+	pcall(function() applyInvisible(false) end)
+	pcall(function()
+		local g = getgenv()
+		g.ESP_ENABLED = false
+		g.NOCLIP = false
+		g.INFINITE_JUMP = false
+		g.AIMLOCK = false
+		g.AUTO_SHOOT = false
+		g.AUTO_KNIFE = false
+		g.KILL_AURA = false
+		g.AUTO_WARP_GUN = false
+		g.GunESP = false
+		g.AUTO_COIN_COLLECT = false
+		g.CHAT_ANNOUNCE = false
+	end)
 	AI.Speed = nil; AI.Jump = nil; AI.Spin = false
 	UpdateESP()
 	for k, c in pairs(Conn) do pcall(function() c:Disconnect() end); Conn[k] = nil end
@@ -3127,44 +3143,30 @@ local function ProcessTalk(raw)
 	end
 
 	if HasAny(c, {"help", "ช่วย", "คำสั่ง", "ทำอะไรได้บ้าง", "ใช้ยังไง", "commands", "menu", "what can you do", "how to use"}) then
-		local thMsg = "🤖 <b>Kuo Hub AI</b> มี 2 โหมด:\n\n" ..
-			"💬 <b>โหมด TALK</b> — คุยเล่น ถามตอบ (ไทย/อังกฤษ)\n\n" ..
-			"⚡ <b>โหมด CODE</b> — คำสั่งโปร (พิมพ์ได้ทั้ง 2 ภาษา):\n" ..
-			"• <font color='#32CD96'>fly / บิน</font> — บินอิสระ\n" ..
-			"• <font color='#32CD96'>unfly / ปิดบิน</font>\n" ..
-			"• <font color='#32CD96'>speed 100 / วิ่ง 100</font> — วิ่งเร็ว\n" ..
-			"• <font color='#32CD96'>jump 100 / โดด 100</font> — โดดสูง\n" ..
-			"• <font color='#32CD96'>infjump / โดดไม่จำกัด</font>\n" ..
-			"• <font color='#32CD96'>noclip / ทะลุ</font>\n" ..
-			"• <font color='#32CD96'>esp red / มอง แดง</font> — มองทะลุ (รองรับ: red, green, blue, yellow, pink, purple, white, black / แดง เขียว น้ำเงิน เหลือง ชมพู ม่วง ขาว ดำ)\n" ..
-			"• <font color='#32CD96'>unesp / ปิดมอง</font>\n" ..
-			"• <font color='#32CD96'>hitbox 10 / ฮิต 10</font> — ขยายฮิตบ็อกซ์\n" ..
-			"• <font color='#32CD96'>spin / สปิน</font> — หมุนตัว | <font color='#32CD96'>unspin / ปิดสปิน</font>\n" ..
-			"• <font color='#32CD96'>bright / สว่าง</font> — สว่างทั้งแมป\n" ..
-			"• <font color='#32CD96'>god / อมตะ</font>\n" ..
-			"• <font color='#32CD96'>invisible / ล่องหน</font>\n" ..
-			"• <font color='#32CD96'>warp ชื่อ / วาป ชื่อ</font> — วาร์ปหาคน (หรือพิมพ์ <b>/</b> เพื่อเลือกจากรายชื่อ)\n" ..
-			"• <font color='#32CD96'>reset / รีเซ็ต</font> — ล้างโปรทั้งหมด"
-		local enMsg = "🤖 <b>Kuo Hub AI</b> has 2 modes:\n\n" ..
-			"💬 <b>TALK mode</b> — chat with me (Thai/English)\n\n" ..
-			"⚡ <b>CODE mode</b> — cheat commands:\n" ..
-			"• <font color='#32CD96'>fly</font> — fly freely\n" ..
-			"• <font color='#32CD96'>unfly</font>\n" ..
-			"• <font color='#32CD96'>speed 100</font> — run faster\n" ..
-			"• <font color='#32CD96'>jump 100</font> — jump higher\n" ..
-			"• <font color='#32CD96'>infjump</font> — infinite jump\n" ..
-			"• <font color='#32CD96'>noclip</font> — walk through walls\n" ..
-			"• <font color='#32CD96'>esp red</font> — player ESP (red, green, blue, yellow, pink, purple, white, black)\n" ..
-			"• <font color='#32CD96'>unesp</font>\n" ..
-			"• <font color='#32CD96'>hitbox 10</font> — expand hitboxes\n" ..
-			"• <font color='#32CD96'>spin</font> — spin bot | <font color='#32CD96'>unspin</font>\n" ..
-			"• <font color='#32CD96'>bright</font> — full brightness\n" ..
-			"• <font color='#32CD96'>god</font> — god mode\n" ..
-			"• <font color='#32CD96'>invisible</font>\n" ..
-			"• <font color='#32CD96'>warp Name</font> — teleport to player (or type <b>/</b> to pick)\n" ..
-			"• <font color='#32CD96'>reset</font> — reset all cheats"
-		AddChatMessage("AI", isThai(raw) and thMsg or enMsg, Color3.fromRGB(120, 170, 240))
-		SaveCurrentChatToHistory()
+		local H = {
+			th = {
+				"💬 <b>โหมด TALK</b> — คุยเล่น ถามตอบได้เลย (ไทย/อังกฤษ)",
+				"⚡ <b>คำสั่งหลัก</b> (ใช้ระบบสคริปต์หลัก):
+<font color='#32CD96'>fly/บิน</font> • <font color='#32CD96'>unfly/ปิดบิน</font> • <font color='#32CD96'>speed 100/วิ่ง 100</font> • <font color='#32CD96'>esp/มอง</font> • <font color='#32CD96'>unesp/ปิดมอง</font>",
+				"🧱 <font color='#32CD96'>noclip/ทะลุ</font> • <font color='#32CD96'>infjump/โดดไม่จำกัด</font> • <font color='#32CD96'>invisible/ล่องหน</font> • <font color='#32CD96'>jump 100/โดด 100</font>",
+				"🔪 <b>คำสั่ง MM2</b>: <font color='#32CD96'>shoot/ยิงออโต้</font> • <font color='#32CD96'>knife/มีดออโต้</font> • <font color='#32CD96'>killaura</font> • <font color='#32CD96'>aimlock/ล็อคเป้า</font>",
+				"🔫 <font color='#32CD96'>warpgun/วาปปืน</font> • <font color='#32CD96'>gunesp</font> • <font color='#32CD96'>coin/เก็บเหรียญ</font> • <font color='#32CD96'>hitbox 10/ฮิต 10</font> • <font color='#32CD96'>spin/สปิน</font>",
+				"🎮 <font color='#32CD96'>bright/สว่าง</font> • <font color='#32CD96'>god/อมตะ</font> • <font color='#32CD96'>warp ชื่อ/วาป ชื่อ</font> • <font color='#32CD96'>reset/รีเซ็ต</font>",
+			},
+			en = {
+				"💬 <b>TALK mode</b> — just chat with me (Thai/English)",
+				"⚡ <b>Main commands</b> (uses main script systems):
+<font color='#32CD96'>fly</font> • <font color='#32CD96'>unfly</font> • <font color='#32CD96'>speed 100</font> • <font color='#32CD96'>esp</font> • <font color='#32CD96'>unesp</font>",
+				"🧱 <font color='#32CD96'>noclip</font> • <font color='#32CD96'>infjump</font> • <font color='#32CD96'>invisible</font> • <font color='#32CD96'>jump 100</font>",
+				"🔪 <b>MM2 commands</b>: <font color='#32CD96'>shoot</font> • <font color='#32CD96'>knife</font> • <font color='#32CD96'>killaura</font> • <font color='#32CD96'>aimlock</font>",
+				"🔫 <font color='#32CD96'>warpgun</font> • <font color='#32CD96'>gunesp</font> • <font color='#32CD96'>coin</font> • <font color='#32CD96'>hitbox 10</font> • <font color='#32CD96'>spin</font>",
+				"🎮 <font color='#32CD96'>bright</font> • <font color='#32CD96'>god</font> • <font color='#32CD96'>warp Name</font> • <font color='#32CD96'>reset</font>",
+			},
+		}
+		for i = 1, 6 do
+			AddChatMessage("AI", LastTH and H.th[i] or H.en[i], Color3.fromRGB(120, 170, 240))
+			SaveCurrentChatToHistory()
+		end
 		return
 	end
 
@@ -3242,6 +3244,7 @@ local function ProcessCode(raw)
 	local char = LocalPlayer.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	local root = char and char:FindFirstChild("HumanoidRootPart")
+	local G = getgenv()
 
 	-- ===== HELP =====
 	if cn == "help" or HasAny(cs, {"คำสั่ง", "วิธีใช้", "รายการ", "command list"}) then
@@ -3265,35 +3268,37 @@ local function ProcessCode(raw)
 	end
 	if HasAny(cs, {"บิน", "fly"}) then
 		AI.Fly = true
-		if Conn.Fly then Conn.Fly:Disconnect() end
-		Conn.Fly = RunService.RenderStepped:Connect(function()
-			local ch = LocalPlayer.Character
-			local r = ch and ch:FindFirstChild("HumanoidRootPart")
-			local h = ch and ch:FindFirstChildOfClass("Humanoid")
-			if AI.Fly and r and h then
-				h.PlatformStand = true
-				local cam = workspace.CurrentCamera
-				local md = h.MoveDirection
-				local vel = Vector3.zero
-				if md.Magnitude > 0 then
-					local rel = cam.CFrame:VectorToObjectSpace(md)
-					vel = (cam.CFrame.LookVector * (-rel.Z) + cam.CFrame.RightVector * rel.X).Unit * AI.FlySpeed
+		local mainOk = pcall(function() setFly(true) end)
+		if not mainOk and not Conn.Fly then
+			Conn.Fly = RunService.RenderStepped:Connect(function()
+				local ch = LocalPlayer.Character
+				local r = ch and ch:FindFirstChild("HumanoidRootPart")
+				local h = ch and ch:FindFirstChildOfClass("Humanoid")
+				if AI.Fly and r and h then
+					h.PlatformStand = true
+					local cam = workspace.CurrentCamera
+					local md = h.MoveDirection
+					local vel = Vector3.zero
+					if md.Magnitude > 0 then
+						local rel = cam.CFrame:VectorToObjectSpace(md)
+						vel = (cam.CFrame.LookVector * (-rel.Z) + cam.CFrame.RightVector * rel.X).Unit * AI.FlySpeed
+					end
+					r.AssemblyLinearVelocity = vel
+				elseif not AI.Fly and h then
+					h.PlatformStand = false
 				end
-				r.AssemblyLinearVelocity = vel
-				r.CFrame = CFrame.new(r.Position, r.Position + cam.CFrame.LookVector)
-			elseif not AI.Fly and h then
-				h.PlatformStand = false
-			end
-		end)
-		ok("เปิดระบบบินเรียบร้อย! (เดินตามทิศกล้อง + Space/Ctrl โดดลงของสคริปต์หลัก)", "Fly enabled!")
+			end)
+		end
+		ok("เปิดระบบบินเรียบร้อย! (ระบบสคริปต์หลัก)", "Fly enabled! (main system)")
 		return
 	end
 
 	-- ===== SPEED =====
 	if HasAny(cs, {"speed", "วิ่ง", "run", "ไว"}) then
 		local v = num or 100
-		AI.Speed = v
-		ok("ตั้งความเร็ววิ่งเป็น "..v.." เรียบร้อย!", "Speed set to "..v.."!")
+		AI.Speed = nil
+		G.walkSpeed = v
+		ok("ตั้งความเร็ววิ่งเป็น "..v.." เรียบร้อย! (ระบบสคริปต์หลัก)", "Speed set to "..v.."! (main script system)")
 		return
 	end
 
@@ -3307,16 +3312,10 @@ local function ProcessCode(raw)
 
 	-- ===== INFINITE JUMP =====
 	if HasAny(cs, {"infjump", "โดดไม่จำกัด", "โดดรัว", "กระโดดรัว", "infinite jump"}) then
-		AI.InfJump = not AI.InfJump
-		if AI.InfJump then
-			if Conn.InfJump then Conn.InfJump:Disconnect() end
-			Conn.InfJump = UserInputService.JumpRequest:Connect(function()
-				local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-				if AI.InfJump and h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
-			end)
-			ok("เปิดโดดไม่จำกัดเรียบร้อย!", "Infinite jump enabled!")
+		G.INFINITE_JUMP = not G.INFINITE_JUMP
+		if G.INFINITE_JUMP then
+			ok("เปิดโดดไม่จำกัดเรียบร้อย! (ระบบสคริปต์หลัก)", "Infinite jump enabled! (main system)")
 		else
-			if Conn.InfJump then Conn.InfJump:Disconnect(); Conn.InfJump = nil end
 			infoMsg("ปิดโดดไม่จำกัดแล้ว", "Infinite jump disabled")
 		end
 		return
@@ -3324,45 +3323,74 @@ local function ProcessCode(raw)
 
 	-- ===== NOCLIP =====
 	if HasAny(cs, {"noclip", "ทะลุ", "ทะลุกำแพง", "เดินทะลุ", "wallhack walk"}) then
-		AI.Noclip = not AI.Noclip
-		if AI.Noclip then
-			if Conn.Noclip then Conn.Noclip:Disconnect() end
-			Conn.Noclip = RunService.Stepped:Connect(function()
-				local ch = LocalPlayer.Character
-				if ch then
-					for _, v in pairs(ch:GetDescendants()) do
-						if v:IsA("BasePart") then v.CanCollide = false end
-					end
-				end
-			end)
-			ok("เปิดทะลุกำแพงเรียบร้อย!", "Noclip enabled!")
+		G.NOCLIP = not G.NOCLIP
+		if G.NOCLIP then
+			ok("เปิดทะลุกำแพงเรียบร้อย! (ระบบสคริปต์หลัก)", "Noclip enabled! (main system)")
 		else
-			if Conn.Noclip then Conn.Noclip:Disconnect(); Conn.Noclip = nil end
+			local ch2 = LocalPlayer.Character
+			if ch2 then
+				for _, v in pairs(ch2:GetDescendants()) do
+					if v:IsA("BasePart") then v.CanCollide = true end
+				end
+			end
 			infoMsg("ปิดทะลุกำแพงแล้ว", "Noclip disabled")
 		end
 		return
 	end
 
-	-- ===== ESP =====
+	-- ===== MM2 COMMANDS (ระบบสคริปต์หลัก) =====
+	if HasAny(cs, {"shoot", "ยิงออโต้", "autoshoot", "auto shoot"}) then
+		G.AUTO_SHOOT = not G.AUTO_SHOOT
+		ok(G.AUTO_SHOOT and "เปิดยิงออโต้แล้ว (ระบบหลัก)" or "ปิดยิงออโต้แล้ว",
+		   G.AUTO_SHOOT and "Auto shoot ON (main system)" or "Auto shoot OFF")
+		return
+	end
+	if HasAny(cs, {"knife", "มีดออโต้", "autoknife", "auto knife"}) then
+		G.AUTO_KNIFE = not G.AUTO_KNIFE
+		ok(G.AUTO_KNIFE and "เปิดมีดออโต้แล้ว (ระบบหลัก)" or "ปิดมีดออโต้แล้ว",
+		   G.AUTO_KNIFE and "Auto knife ON (main system)" or "Auto knife OFF")
+		return
+	end
+	if HasAny(cs, {"killaura", "ฆ่าออโต้", "kill aura"}) then
+		G.KILL_AURA = not G.KILL_AURA
+		ok(G.KILL_AURA and "เปิด Kill Aura แล้ว (ระบบหลัก)" or "ปิด Kill Aura แล้ว",
+		   G.KILL_AURA and "Kill aura ON (main system)" or "Kill aura OFF")
+		return
+	end
+	if HasAny(cs, {"aimlock", "ล็อคเป้า", "ล็อกเป้า", "aim lock"}) then
+		G.AIMLOCK = not G.AIMLOCK
+		ok(G.AIMLOCK and "เปิดล็อคเป้าแล้ว (ระบบหลัก)" or "ปิดล็อคเป้าแล้ว",
+		   G.AIMLOCK and "Aimlock ON (main system)" or "Aimlock OFF")
+		return
+	end
+	if HasAny(cs, {"warpgun", "วาปปืน", "warp gun"}) then
+		G.AUTO_WARP_GUN = not G.AUTO_WARP_GUN
+		ok(G.AUTO_WARP_GUN and "เปิดวาปเก็บปืนแล้ว (ระบบหลัก)" or "ปิดวาปเก็บปืนแล้ว",
+		   G.AUTO_WARP_GUN and "Auto warp gun ON" or "Auto warp gun OFF")
+		return
+	end
+	if HasAny(cs, {"gunesp", "ปืนesp", "gun esp"}) then
+		G.GunESP = not G.GunESP
+		ok(G.GunESP and "เปิด Gun ESP แล้ว" or "ปิด Gun ESP แล้ว",
+		   G.GunESP and "Gun ESP ON" or "Gun ESP OFF")
+		return
+	end
+	if HasAny(cs, {"coin", "coins", "เก็บเหรียญ", "farm coin"}) then
+		G.AUTO_COIN_COLLECT = not G.AUTO_COIN_COLLECT
+		ok(G.AUTO_COIN_COLLECT and "เปิดเก็บเหรียญออโต้แล้ว (ระบบหลัก)" or "ปิดเก็บเหรียญออโต้แล้ว",
+		   G.AUTO_COIN_COLLECT and "Auto coin collect ON" or "Auto coin collect OFF")
+		return
+	end
+
+	-- ===== ESP (ระบบสคริปต์หลัก สีตามบทบาท) =====
 	if HasAny(cs, {"unesp", "ปิดมอง", "ปิดesp", "เลิกมอง"}) then
-		AI.ESP = false
-		UpdateESP()
-		infoMsg("ปิดมองทะลุแล้ว", "ESP disabled")
+		G.ESP_ENABLED = false
+		infoMsg("ปิดมองทะลุแล้ว (ระบบหลัก)", "ESP disabled (main system)")
 		return
 	end
 	if HasAny(cs, {"esp", "มอง", "มองทะลุ", "ไฮไลท์", "highlight"}) then
-		local chosen = COLOR_MAP[1]
-		for _, data in ipairs(COLOR_MAP) do
-			if cs:find(data.th) or cs:find(data.en) then
-				chosen = data
-				break
-			end
-		end
-		AI.ESP = true
-		AI.ESPColor = chosen.color
-		AI.ESPColorName = chosen.en.."/"..chosen.th
-		UpdateESP()
-		ok("เปิดมองทะลุสี "..chosen.th.." ("..chosen.en..") เรียบร้อย!", "ESP enabled: "..chosen.en)
+		G.ESP_ENABLED = true
+		ok("เปิด ESP ของสคริปต์หลักแล้ว (ไฮไลท์+ชื่อ+เลือด ตามบทบาท)", "Main ESP enabled (role colors)")
 		return
 	end
 
@@ -3419,13 +3447,15 @@ local function ProcessCode(raw)
 
 	-- ===== INVISIBLE (self-contained) =====
 	if HasAny(cs, {"uninvisible", "ปิดล่องหน", "เลิกล่องหน", "มาเห็น", "เลิกหาย"}) then
-		Invis.Set(false)
-		infoMsg("ปิดล่องหนแล้ว", "Invisible mode disabled")
+		local mainOk = pcall(function() applyInvisible(false) end)
+		if not mainOk then Invis.Set(false) end
+		infoMsg("ปิดล่องหนแล้ว (ระบบสคริปต์หลัก)", "Invisible disabled (main system)")
 		return
 	end
 	if HasAny(cs, {"ล่องหน", "invisible", "หายตัว"}) then
-		Invis.Set(true)
-		ok("เปิดโหมดล่องหนเรียบร้อย!", "Invisible mode enabled!")
+		local mainOk = pcall(function() applyInvisible(true) end)
+		if not mainOk then Invis.Set(true) end
+		ok("เปิดโหมดล่องหนเรียบร้อย! (ระบบสคริปต์หลัก)", "Invisible enabled! (main system)")
 		return
 	end
 
